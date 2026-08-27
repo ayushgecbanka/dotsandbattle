@@ -846,6 +846,186 @@ input:focus{
     margin-top:5px;
 }
 
+.chat-panel{
+    position:relative;
+}
+
+.chat-toolbar{
+    display:flex;
+    gap:8px;
+    margin-bottom:8px;
+}
+
+.chat-tool{
+    border:1px solid #354263;
+    background:#080e20;
+    color:#fff;
+    border-radius:11px;
+    padding:8px 12px;
+    cursor:pointer;
+    font-size:16px;
+    font-weight:bold;
+    transition:.2s;
+}
+
+.chat-tool:hover{
+    border-color:#20d9ff;
+    box-shadow:0 0 12px rgba(32,217,255,.35);
+}
+
+#chatInput{
+    flex:1;
+    width:100%;
+    padding:10px 14px;
+    border-radius:11px;
+    border:1px solid #354263;
+    background:#070d20;
+    color:#fff;
+    outline:none;
+    font-size:14px;
+    font-family:inherit;
+    resize:none;
+    line-height:1.4;
+    max-height:80px;
+    overflow-y:auto;
+}
+
+#chatInput:focus{
+    border-color:#20d9ff;
+}
+
+.chat-popover{
+    position:absolute;
+    left:18px;
+    right:18px;
+    bottom:80px;
+    background:rgba(10,17,39,.98);
+    border:1px solid #2b385b;
+    border-radius:14px;
+    padding:12px;
+    box-shadow:0 20px 50px rgba(0,0,0,.5);
+    z-index:20;
+    max-height:300px;
+    overflow:auto;
+}
+
+.popover-title{
+    font-size:12px;
+    font-weight:bold;
+    letter-spacing:1px;
+    color:#20d9ff;
+    margin-bottom:8px;
+}
+
+.sticker-grid{
+    display:grid;
+    grid-template-columns:repeat(6,1fr);
+    gap:6px;
+}
+
+.sticker-section-label,
+.gif-section-label{
+    grid-column:1 / -1;
+    font-size:11px;
+    color:#aab5d1;
+    margin:4px 0 2px;
+}
+
+.sticker-item{
+    font-size:24px;
+    text-align:center;
+    padding:6px 0;
+    border-radius:8px;
+    cursor:pointer;
+    transition:.15s;
+}
+
+.sticker-item:hover{
+    background:rgba(32,217,255,.12);
+    transform:scale(1.1);
+}
+
+.gif-search-row{
+    margin-bottom:8px;
+}
+
+.gif-search-row input{
+    width:100%;
+    padding:10px 12px;
+    border-radius:10px;
+    border:1px solid #354263;
+    background:#070d20;
+    color:#fff;
+    outline:none;
+    font-size:14px;
+}
+
+.gif-search-row input:focus{
+    border-color:#20d9ff;
+}
+
+.gif-loading{
+    color:#aab5d1;
+    font-size:13px;
+    text-align:center;
+    padding:6px 0;
+}
+
+.gif-error{
+    color:#ff63b5;
+    font-size:13px;
+    text-align:center;
+    padding:6px 0;
+}
+
+.gif-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+}
+
+.gif-thumb{
+    width:100%;
+    border-radius:10px;
+    cursor:pointer;
+    display:block;
+    border:1px solid #2b385b;
+    transition:.15s;
+}
+
+.gif-thumb:hover{
+    border-color:#20d9ff;
+    box-shadow:0 0 12px rgba(32,217,255,.4);
+}
+
+.chat-sticker{
+    font-size:42px;
+    line-height:1.1;
+    animation:stickerPop .25s ease;
+}
+
+@keyframes stickerPop{
+    0%{ transform:scale(0.7); }
+    60%{ transform:scale(1.05); }
+    100%{ transform:scale(1); }
+}
+
+.chat-gif{
+    max-width:220px;
+    max-height:220px;
+    border-radius:12px;
+    display:block;
+}
+
+@media(max-width:800px){
+    .chat-gif{
+        max-width:180px;
+    }
+    .sticker-grid{
+        grid-template-columns:repeat(5,1fr);
+    }
+}
+
 </style>
 </head>
 
@@ -1097,8 +1277,28 @@ Player 2
         <span class="chat-unread" id="chatUnread"></span>
     </div>
     <div class="chat-messages" id="chatMessages"></div>
+
+    <div class="chat-popover" id="stickerPicker" style="display:none;">
+        <div class="popover-title">STICKERS</div>
+        <div class="sticker-grid" id="stickerGrid"></div>
+    </div>
+
+    <div class="chat-popover" id="gifPicker" style="display:none;">
+        <div class="gif-search-row">
+            <input id="gifSearch" type="text" placeholder="🔎 Search GIFs...">
+        </div>
+        <div class="gif-loading" id="gifLoading" style="display:none;">Loading...</div>
+        <div class="gif-grid" id="gifGrid"></div>
+        <div class="gif-error" id="gifError" style="display:none;"></div>
+    </div>
+
+    <div class="chat-toolbar">
+        <button type="button" class="chat-tool" id="stickerBtn" title="Stickers">😊</button>
+        <button type="button" class="chat-tool" id="gifBtn" title="GIF">GIF</button>
+    </div>
+
     <div class="chat-input-row">
-        <input id="chatInput" type="text" maxlength="200" placeholder="Type a message...">
+        <textarea id="chatInput" maxlength="200" rows="1" placeholder="Type a message..."></textarea>
         <button type="button" class="btn create-btn" id="chatSend">SEND</button>
     </div>
     <div class="chat-counter"><span id="chatCounter">0 / 200</span></div>
@@ -2777,6 +2977,9 @@ function setupChatListener(){
 
 function cleanupChatListener(){
 
+    closeStickerPicker();
+    closeGifPicker();
+
     if(chatRef && chatCallback){
         chatRef.off("child_added", chatCallback);
     }
@@ -2810,6 +3013,7 @@ function sendChatMessage(){
     const sender = getChatSender();
 
     const messageData = {
+        type: "text",
         uid: sender.uid,
         username: sender.username,
         displayName: sender.displayName,
@@ -2881,12 +3085,42 @@ function renderChatMessage(data){
     meta.appendChild(name);
     meta.appendChild(time);
 
-    const textEl = document.createElement("div");
-    textEl.className = "chat-text";
-    textEl.textContent = data.text;
+    let body;
+
+    if(data.type === "sticker" && data.sticker){
+        body = document.createElement("div");
+        body.className = "chat-sticker";
+        body.textContent = data.sticker;
+    }
+    else if(data.type === "gif" && data.gifUrl){
+        if(isTrustedGifUrl(data.gifUrl)){
+            const img = document.createElement("img");
+            img.className = "chat-gif";
+            img.alt = data.gifTitle || "GIF";
+            img.loading = "lazy";
+            img.src = data.gifUrl;
+            img.onerror = function(){
+                const fb = document.createElement("div");
+                fb.className = "chat-text";
+                fb.textContent = "🎞️ GIF unavailable";
+                if(img.parentNode) img.parentNode.replaceChild(fb, img);
+            };
+            body = img;
+        }
+        else {
+            body = document.createElement("div");
+            body.className = "chat-text";
+            body.textContent = "🎞️ GIF unavailable";
+        }
+    }
+    else {
+        body = document.createElement("div");
+        body.className = "chat-text";
+        body.textContent = data.text;
+    }
 
     wrap.appendChild(meta);
-    wrap.appendChild(textEl);
+    wrap.appendChild(body);
 
     box.appendChild(wrap);
 
@@ -2951,10 +3185,13 @@ function initializeChat(){
     const send = document.getElementById("chatSend");
     if(!input || !send) return;
 
-    input.addEventListener("input", updateCounter);
+    input.addEventListener("input", function(){
+        updateCounter();
+        resizeChatInput();
+    });
 
     input.addEventListener("keydown", function(e){
-        if(e.key === "Enter"){
+        if(e.key === "Enter" && !e.shiftKey){
             e.preventDefault();
             sendChatMessage();
         }
@@ -2971,12 +3208,374 @@ function initializeChat(){
 
     send.addEventListener("click", sendChatMessage);
 
+    const stickerBtn = document.getElementById("stickerBtn");
+    const gifBtn = document.getElementById("gifBtn");
+
+    if(stickerBtn){
+        stickerBtn.addEventListener("click", openStickerPicker);
+    }
+
+    if(gifBtn){
+        gifBtn.addEventListener("click", openGifPicker);
+    }
+
+    const gifSearch = document.getElementById("gifSearch");
+    if(gifSearch){
+        gifSearch.addEventListener("keydown", function(e){
+            if(e.key === "Enter"){
+                e.preventDefault();
+                searchGifs(gifSearch.value.trim());
+            }
+        });
+        let gifTimer = null;
+        gifSearch.addEventListener("input", function(){
+            if(gifTimer) clearTimeout(gifTimer);
+            gifTimer = setTimeout(function(){
+                searchGifs(gifSearch.value.trim());
+            }, 450);
+        });
+    }
+
+    document.addEventListener("keydown", function(e){
+        if(e.key === "Escape"){
+            closeStickerPicker();
+            closeGifPicker();
+        }
+    });
+
+    document.addEventListener("click", function(e){
+        const t = e.target;
+        if(t && t.closest){
+            if(t.closest("#stickerPicker") || t.closest("#gifPicker")) return;
+        }
+        if(t && (t.id === "stickerBtn" || t.id === "gifBtn")) return;
+        closeStickerPicker();
+        closeGifPicker();
+    });
+
     updateCounter();
+    resizeChatInput();
 
 }
 
 
 initializeChat();
+
+
+/* ================= STICKERS + GIFS ================= */
+
+const STICKERS = [
+    "😂","😎","🤣","🔥","❤️","😭",
+    "😡","😱","🤯","👏","👍","👎",
+    "🎉","💀","🤝","😈","🥳","😍",
+    "⚡","👑","💯","🙈","🤔","😴"
+];
+
+const GIF_CONFIG = {
+    provider: "giphy",
+    apiKey: "YOUR_GIPHY_API_KEY",
+    allowedHosts: [
+        "media.giphy.com",
+        "i.giphy.com",
+        "media0.giphy.com",
+        "media1.giphy.com",
+        "media2.giphy.com",
+        "media3.giphy.com",
+        "media4.giphy.com"
+    ]
+};
+
+const GIF_ENABLED = !!(GIF_CONFIG.apiKey && GIF_CONFIG.apiKey !== "YOUR_GIPHY_API_KEY");
+
+let gifController = null;
+
+
+function isStickerAllowed(s){
+    return STICKERS.indexOf(s) !== -1;
+}
+
+
+function isTrustedGifUrl(url){
+    if(typeof url !== "string") return false;
+    if(url.indexOf("https://") !== 0) return false;
+    try{
+        const u = new URL(url);
+        return GIF_CONFIG.allowedHosts.indexOf(u.host) !== -1;
+    }
+    catch(e){
+        return false;
+    }
+}
+
+
+function openStickerPicker(){
+    closeGifPicker();
+    renderStickerGrid();
+    document.getElementById("stickerPicker").style.display = "block";
+}
+
+
+function closeStickerPicker(){
+    const p = document.getElementById("stickerPicker");
+    if(p) p.style.display = "none";
+}
+
+
+function stickerItem(s){
+    const el = document.createElement("div");
+    el.className = "sticker-item";
+    el.textContent = s;
+    el.title = s;
+    el.addEventListener("click", function(){
+        sendSticker(s);
+    });
+    return el;
+}
+
+
+function renderStickerGrid(){
+    const grid = document.getElementById("stickerGrid");
+    if(!grid) return;
+    grid.innerHTML = "";
+
+    const recent = loadRecentStickers();
+    if(recent.length){
+        const rl = document.createElement("div");
+        rl.className = "sticker-section-label";
+        rl.textContent = "Recent";
+        grid.appendChild(rl);
+        recent.forEach(s => grid.appendChild(stickerItem(s)));
+    }
+
+    const tl = document.createElement("div");
+    tl.className = "sticker-section-label";
+    tl.textContent = "Stickers";
+    grid.appendChild(tl);
+
+    STICKERS.forEach(s => grid.appendChild(stickerItem(s)));
+}
+
+
+function sendSticker(sticker){
+    if(!isStickerAllowed(sticker)) return;
+    if(!roomCode || !db) return;
+
+    const sender = getChatSender();
+
+    const data = {
+        type: "sticker",
+        sticker: sticker,
+        uid: sender.uid,
+        username: sender.username,
+        displayName: sender.displayName,
+        photoURL: sender.photoURL,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+    };
+
+    db.ref("rooms/" + roomCode + "/chat").push().set(data)
+        .catch(function(error){ console.error(error); });
+
+    saveRecentSticker(sticker);
+    closeStickerPicker();
+}
+
+
+function openGifPicker(){
+    closeStickerPicker();
+    const picker = document.getElementById("gifPicker");
+    if(picker) picker.style.display = "block";
+
+    const searchEl = document.getElementById("gifSearch");
+    if(searchEl) searchEl.value = "";
+    renderRecentGifs();
+    searchGifs("gaming");
+
+    if(searchEl) searchEl.focus();
+}
+
+
+function closeGifPicker(){
+    const p = document.getElementById("gifPicker");
+    if(p) p.style.display = "none";
+    if(gifController){
+        try{ gifController.abort(); }catch(e){}
+        gifController = null;
+    }
+}
+
+
+function renderRecentGifs(){
+    const grid = document.getElementById("gifGrid");
+    if(!grid) return;
+    grid.innerHTML = "";
+
+    const recent = loadRecentGifs();
+    if(recent.length){
+        const rl = document.createElement("div");
+        rl.className = "gif-section-label";
+        rl.textContent = "Recent";
+        grid.appendChild(rl);
+        recent.forEach(g => grid.appendChild(gifThumb(g.url, g.title || "")));
+    }
+
+    const results = document.createElement("div");
+    results.className = "gif-grid";
+    results.id = "gifResults";
+    grid.appendChild(results);
+}
+
+
+function gifThumb(url, title){
+    const img = document.createElement("img");
+    img.className = "gif-thumb";
+    img.loading = "lazy";
+    img.src = url;
+    img.alt = title || "GIF";
+    img.addEventListener("click", function(){
+        sendGif(url, title || "");
+    });
+    return img;
+}
+
+
+function searchGifs(query){
+    const results = document.getElementById("gifResults");
+    const loading = document.getElementById("gifLoading");
+    const errorEl = document.getElementById("gifError");
+
+    if(!GIF_ENABLED){
+        if(errorEl){
+            errorEl.textContent = "GIF service unavailable";
+            errorEl.style.display = "block";
+        }
+        if(results) results.innerHTML = "";
+        return;
+    }
+
+    if(!query) query = "gaming";
+    if(loading) loading.style.display = "block";
+    if(errorEl) errorEl.style.display = "none";
+    if(results) results.innerHTML = "";
+
+    const url = "https://api.giphy.com/v1/gifs/search?api_key=" +
+        encodeURIComponent(GIF_CONFIG.apiKey) +
+        "&q=" + encodeURIComponent(query) +
+        "&limit=12&rating=g";
+
+    if(gifController) gifController.abort();
+    gifController = new AbortController();
+
+    fetch(url, { signal: gifController.signal })
+        .then(function(r){ return r.json(); })
+        .then(function(res){
+            if(loading) loading.style.display = "none";
+            const items = (res && res.data) || [];
+            if(!items.length){
+                if(errorEl){
+                    errorEl.textContent = "No GIFs found.";
+                    errorEl.style.display = "block";
+                }
+                return;
+            }
+            items.forEach(function(item){
+                const u = (item.images && (item.images.fixed_width.url || item.images.downsized.url)) || "";
+                if(!u || !results) return;
+                results.appendChild(gifThumb(u, item.title || ""));
+            });
+        })
+        .catch(function(){
+            if(loading) loading.style.display = "none";
+            if(errorEl){
+                errorEl.textContent = "Unable to load GIFs. Please try again.";
+                errorEl.style.display = "block";
+            }
+        });
+}
+
+
+function sendGif(url, title){
+    if(!isTrustedGifUrl(url)) return;
+    if(!roomCode || !db) return;
+
+    const sender = getChatSender();
+
+    const data = {
+        type: "gif",
+        gifUrl: url,
+        gifTitle: title || "",
+        uid: sender.uid,
+        username: sender.username,
+        displayName: sender.displayName,
+        photoURL: sender.photoURL,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+    };
+
+    db.ref("rooms/" + roomCode + "/chat").push().set(data)
+        .catch(function(error){ console.error(error); });
+
+    saveRecentGif(url, title || "");
+    closeGifPicker();
+}
+
+
+/* ================= RECENT (localStorage) ================= */
+
+function loadRecentGifs(){
+    try{
+        const raw = localStorage.getItem("dotsBattleRecentGifs");
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr : [];
+    }
+    catch(e){
+        return [];
+    }
+}
+
+
+function saveRecentGif(url, title){
+    try{
+        const arr = loadRecentGifs().filter(function(g){
+            return g.url !== url;
+        });
+        arr.unshift({ url: url, title: title });
+        while(arr.length > 10) arr.pop();
+        localStorage.setItem("dotsBattleRecentGifs", JSON.stringify(arr));
+    }
+    catch(e){}
+}
+
+
+function loadRecentStickers(){
+    try{
+        const raw = localStorage.getItem("dotsBattleRecentStickers");
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr : [];
+    }
+    catch(e){
+        return [];
+    }
+}
+
+
+function saveRecentSticker(s){
+    try{
+        const arr = loadRecentStickers().filter(function(x){
+            return x !== s;
+        });
+        arr.unshift(s);
+        while(arr.length > 10) arr.pop();
+        localStorage.setItem("dotsBattleRecentStickers", JSON.stringify(arr));
+    }
+    catch(e){}
+}
+
+
+function resizeChatInput(){
+    const el = document.getElementById("chatInput");
+    if(!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 80) + "px";
+}
 
 
 /* ================= BACK ================= */
