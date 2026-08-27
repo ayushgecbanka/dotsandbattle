@@ -719,6 +719,133 @@ input:focus{
     background:#3a2030;
 }
 
+/* ================= CHAT ================= */
+
+.chat-panel{
+    background:rgba(10,17,39,.92);
+    border:1px solid #2b385b;
+    border-radius:20px;
+    padding:18px;
+    margin-top:25px;
+    box-shadow:0 15px 45px rgba(0,0,0,.35);
+    width:100%;
+    max-width:620px;
+    margin-left:auto;
+    margin-right:auto;
+}
+
+.chat-header{
+    font-weight:bold;
+    margin-bottom:10px;
+    color:#20d9ff;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.chat-unread{
+    background:#ff58b2;
+    color:#fff;
+    border-radius:12px;
+    padding:2px 8px;
+    font-size:12px;
+    display:none;
+}
+
+.chat-messages{
+    max-height:260px;
+    overflow-y:auto;
+    background:#070d20;
+    border-radius:12px;
+    padding:10px;
+    margin-bottom:10px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+
+.chat-msg{
+    max-width:80%;
+    padding:8px 12px;
+    border-radius:12px;
+    word-wrap:break-word;
+}
+
+.chat-msg.mine{
+    align-self:flex-end;
+    background:rgba(32,217,255,.15);
+    border:1px solid #20d9ff;
+}
+
+.chat-msg.theirs{
+    align-self:flex-start;
+    background:rgba(255,88,178,.12);
+    border:1px solid #ff58b2;
+}
+
+.chat-meta{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    font-size:12px;
+    margin-bottom:3px;
+    color:#aab5d1;
+}
+
+.chat-name{
+    font-weight:bold;
+    color:#fff;
+}
+
+.chat-time{
+    opacity:.7;
+}
+
+.chat-text{
+    font-size:14px;
+    color:#fff;
+    white-space:pre-wrap;
+    word-break:break-word;
+}
+
+.chat-system{
+    align-self:center;
+    text-align:center;
+    font-size:12px;
+    color:#ffd45c;
+    background:rgba(255,212,92,.08);
+    padding:4px 10px;
+    border-radius:10px;
+}
+
+.chat-input-row{
+    display:flex;
+    gap:10px;
+}
+
+#chatInput{
+    flex:1;
+    width:100%;
+    padding:12px 14px;
+    border-radius:11px;
+    border:1px solid #354263;
+    background:#070d20;
+    color:#fff;
+    outline:none;
+    font-size:14px;
+}
+
+#chatInput:focus{
+    border-color:#20d9ff;
+}
+
+.chat-counter{
+    text-align:right;
+    font-size:12px;
+    color:#aab5d1;
+    margin-top:5px;
+}
+
 </style>
 </head>
 
@@ -963,6 +1090,21 @@ Player 2
 ></div>
 
 
+<!-- ================= MATCH CHAT ================= -->
+<div class="chat-panel" id="chatPanel">
+    <div class="chat-header">
+        💬 MATCH CHAT
+        <span class="chat-unread" id="chatUnread"></span>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input-row">
+        <input id="chatInput" type="text" maxlength="200" placeholder="Type a message...">
+        <button type="button" class="btn create-btn" id="chatSend">SEND</button>
+    </div>
+    <div class="chat-counter"><span id="chatCounter">0 / 200</span></div>
+</div>
+
+
 <button
     type="button"
     class="back-btn"
@@ -1045,6 +1187,16 @@ let currentUser = null;
 let myProfile = null;
 
 let resultRecorded = false;
+
+let chatRef = null;
+
+let chatCallback = null;
+
+let unreadCount = 0;
+
+let chatFocused = false;
+
+let chatFinishAnnounced = false;
 
 
 /* ================= SIZE BUTTONS ================= */
@@ -1889,6 +2041,8 @@ document
 
         listenRoom();
 
+        sendSystemMessage((myProfile && myProfile.displayName ? myProfile.displayName : name) + " joined the room");
+
     }
     catch(error){
 
@@ -1925,6 +2079,8 @@ function openGame(){
     .getElementById("roomDisplay")
     .textContent =
     roomCode;
+
+    setupChatListener();
 
 }
 
@@ -2552,7 +2708,275 @@ function showWinner(){
     .textContent =
     "🏁 GAME FINISHED";
 
+    if(!chatFinishAnnounced){
+        chatFinishAnnounced = true;
+        renderChatMessage({ system: true, text: "🏁 Game finished" });
+    }
+
 }
+
+
+/* ================= CHAT ================= */
+
+function getChatSender(){
+
+    if(currentUser && myProfile){
+        return {
+            uid: currentUser.uid,
+            username: myProfile.username || "",
+            displayName: myProfile.displayName || currentUser.displayName || "Player",
+            photoURL: myProfile.photoURL || ""
+        };
+    }
+
+    const p = game && game.players ? game.players[myPlayer] : null;
+    let name = "Player";
+    if(typeof p === "string") name = p;
+    else if(p && p.name) name = p.name;
+
+    return {
+        uid: myPlayer || "guest",
+        username: name,
+        displayName: name,
+        photoURL: ""
+    };
+
+}
+
+
+function setupChatListener(){
+
+    cleanupChatListener();
+
+    if(!roomCode || !db) return;
+
+    chatFinishAnnounced = false;
+
+    chatRef = db.ref("rooms/" + roomCode + "/chat").limitToLast(50);
+
+    chatCallback = chatRef.on("child_added", function(snapshot){
+
+        const data = snapshot.val();
+        if(!data) return;
+
+        renderChatMessage(data);
+
+        if(!data.system && data.uid !== getChatSender().uid){
+            if(!chatFocused || !document.hasFocus()){
+                unreadCount++;
+                updateUnreadCount();
+            }
+        }
+
+        scrollChatToBottom();
+
+    });
+
+}
+
+
+function cleanupChatListener(){
+
+    if(chatRef && chatCallback){
+        chatRef.off("child_added", chatCallback);
+    }
+    else if(chatRef){
+        chatRef.off();
+    }
+
+    chatRef = null;
+    chatCallback = null;
+
+    const box = document.getElementById("chatMessages");
+    if(box) box.innerHTML = "";
+
+    unreadCount = 0;
+    updateUnreadCount();
+
+}
+
+
+function sendChatMessage(){
+
+    const input = document.getElementById("chatInput");
+    if(!input) return;
+
+    let text = (input.value || "").trim();
+    if(!text) return;
+    if(text.length > 200) text = text.substring(0, 200);
+
+    if(!roomCode || !db) return;
+
+    const sender = getChatSender();
+
+    const messageData = {
+        uid: sender.uid,
+        username: sender.username,
+        displayName: sender.displayName,
+        photoURL: sender.photoURL,
+        text: text,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+    };
+
+    db.ref("rooms/" + roomCode + "/chat")
+        .push()
+        .set(messageData)
+        .catch(function(error){
+            console.error(error);
+        });
+
+    input.value = "";
+    updateCounter();
+
+}
+
+
+function sendSystemMessage(text){
+
+    if(!roomCode || !db) return;
+
+    db.ref("rooms/" + roomCode + "/chat")
+        .push()
+        .set({
+            system: true,
+            text: text,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        })
+        .catch(function(error){
+            console.error(error);
+        });
+
+}
+
+
+function renderChatMessage(data){
+
+    const box = document.getElementById("chatMessages");
+    if(!box) return;
+
+    if(data.system){
+        const sys = document.createElement("div");
+        sys.className = "chat-system";
+        sys.textContent = data.text;
+        box.appendChild(sys);
+        return;
+    }
+
+    const mine = data.uid === getChatSender().uid;
+
+    const wrap = document.createElement("div");
+    wrap.className = "chat-msg " + (mine ? "mine" : "theirs");
+
+    const meta = document.createElement("div");
+    meta.className = "chat-meta";
+
+    const name = document.createElement("span");
+    name.className = "chat-name";
+    name.textContent = mine ? "You" : (data.displayName || data.username || "Player");
+
+    const time = document.createElement("span");
+    time.className = "chat-time";
+    time.textContent = formatTime(data.timestamp);
+
+    meta.appendChild(name);
+    meta.appendChild(time);
+
+    const textEl = document.createElement("div");
+    textEl.className = "chat-text";
+    textEl.textContent = data.text;
+
+    wrap.appendChild(meta);
+    wrap.appendChild(textEl);
+
+    box.appendChild(wrap);
+
+}
+
+
+function formatTime(ts){
+
+    if(!ts) return "";
+    const d = new Date(ts);
+    if(isNaN(d.getTime())) return "";
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+}
+
+
+function scrollChatToBottom(){
+
+    const box = document.getElementById("chatMessages");
+    if(box) box.scrollTop = box.scrollHeight;
+
+}
+
+
+function updateUnreadCount(){
+
+    const el = document.getElementById("chatUnread");
+    if(!el) return;
+
+    if(unreadCount > 0){
+        el.textContent = unreadCount + " New";
+        el.style.display = "inline-block";
+    }
+    else{
+        el.textContent = "";
+        el.style.display = "none";
+    }
+
+}
+
+
+function clearUnreadCount(){
+    unreadCount = 0;
+    updateUnreadCount();
+}
+
+
+function updateCounter(){
+
+    const input = document.getElementById("chatInput");
+    const counter = document.getElementById("chatCounter");
+    if(input && counter){
+        counter.textContent = input.value.length + " / 200";
+    }
+
+}
+
+
+function initializeChat(){
+
+    const input = document.getElementById("chatInput");
+    const send = document.getElementById("chatSend");
+    if(!input || !send) return;
+
+    input.addEventListener("input", updateCounter);
+
+    input.addEventListener("keydown", function(e){
+        if(e.key === "Enter"){
+            e.preventDefault();
+            sendChatMessage();
+        }
+    });
+
+    input.addEventListener("focus", function(){
+        chatFocused = true;
+        clearUnreadCount();
+    });
+
+    input.addEventListener("blur", function(){
+        chatFocused = false;
+    });
+
+    send.addEventListener("click", sendChatMessage);
+
+    updateCounter();
+
+}
+
+
+initializeChat();
 
 
 /* ================= BACK ================= */
@@ -2561,6 +2985,7 @@ document
 .getElementById("backHome")
 .addEventListener("click",function(){
 
+    cleanupChatListener();
     location.reload();
 
 });
