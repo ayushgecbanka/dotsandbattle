@@ -1,0 +1,2583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+
+<title>Dots Battle</title>
+
+<style>
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    min-height:100vh;
+    font-family:Arial,sans-serif;
+    color:#fff;
+
+    background:
+    radial-gradient(circle at 15% 20%,rgba(0,210,255,.25),transparent 30%),
+    radial-gradient(circle at 85% 25%,rgba(255,50,170,.25),transparent 30%),
+    radial-gradient(circle at 50% 90%,rgba(100,60,255,.22),transparent 35%),
+    linear-gradient(135deg,#050817,#111a38,#17091f);
+
+    padding:25px;
+}
+
+.container{
+    width:min(1050px,100%);
+    margin:auto;
+}
+
+.header{
+    text-align:center;
+    margin-bottom:25px;
+}
+
+.header h1{
+    margin:0;
+    font-size:42px;
+    letter-spacing:3px;
+
+    background:linear-gradient(
+        90deg,
+        #18d9ff,
+        #806cff,
+        #ff4cae
+    );
+
+    -webkit-background-clip:text;
+    color:transparent;
+}
+
+.header p{
+    color:#aab5d1;
+    margin-top:8px;
+}
+
+
+/* ================= SETUP ================= */
+
+.setup{
+    display:grid;
+    grid-template-columns:1fr 1.3fr 1fr;
+    gap:18px;
+}
+
+.card{
+    background:rgba(10,17,39,.90);
+    border:1px solid #2b385b;
+    border-radius:20px;
+    padding:22px;
+    box-shadow:0 15px 45px rgba(0,0,0,.35);
+}
+
+.card h2{
+    text-align:center;
+    margin-top:0;
+    font-size:19px;
+}
+
+.player1 h2{
+    color:#20d9ff;
+}
+
+.player2 h2{
+    color:#ff58b2;
+}
+
+input{
+    width:100%;
+    padding:14px;
+    margin-top:10px;
+
+    border-radius:11px;
+    border:1px solid #354263;
+
+    background:#070d20;
+    color:#fff;
+
+    outline:none;
+    font-size:15px;
+}
+
+input:focus{
+    border-color:#20d9ff;
+}
+
+
+/* ================= BOARD SELECT ================= */
+
+.board-options{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-top:15px;
+}
+
+.size-btn{
+    width:100%;
+    padding:15px 5px;
+
+    border:2px solid #303c5b;
+    border-radius:13px;
+
+    background:#080e20;
+    color:#fff;
+
+    cursor:pointer;
+
+    font-size:16px;
+    font-weight:bold;
+
+    transition:.2s;
+}
+
+.size-btn:hover{
+    border-color:#20d9ff;
+    transform:translateY(-2px);
+}
+
+.size-btn.selected{
+    border-color:#20d9ff;
+    background:linear-gradient(
+        135deg,
+        #123b50,
+        #20254b
+    );
+
+    box-shadow:
+    0 0 18px rgba(32,217,255,.20);
+}
+
+.size-btn small{
+    display:block;
+    margin-top:5px;
+    color:#aab5d1;
+}
+
+
+/* ================= ONLINE ================= */
+
+.online{
+    margin-top:18px;
+}
+
+.online h2{
+    margin-bottom:8px;
+}
+
+.online p{
+    color:#aab5d1;
+    margin-bottom:18px;
+}
+
+.online-row{
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    gap:10px;
+}
+
+.btn{
+    border:0;
+    border-radius:11px;
+    padding:14px 20px;
+
+    color:#fff;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.create-btn{
+    background:
+    linear-gradient(
+        90deg,
+        #078cff,
+        #d52cb5
+    );
+}
+
+.join-btn{
+    background:#273452;
+}
+
+.status{
+    margin-top:14px;
+    min-height:20px;
+    color:#ff63b5;
+}
+
+
+/* ================= GAME ================= */
+
+.game{
+    display:none;
+}
+
+.game-header{
+    background:rgba(10,17,39,.92);
+    border:1px solid #2b385b;
+    border-radius:20px;
+    padding:18px;
+
+    box-shadow:0 15px 45px rgba(0,0,0,.35);
+}
+
+.room{
+    text-align:center;
+    color:#20d9ff;
+    font-size:18px;
+    font-weight:bold;
+}
+
+.turn{
+    text-align:center;
+    margin-top:12px;
+
+    padding:12px;
+
+    border-radius:12px;
+    background:#070d20;
+
+    font-size:18px;
+    font-weight:bold;
+}
+
+.players{
+    display:flex;
+    justify-content:center;
+    gap:25px;
+    margin-top:15px;
+    flex-wrap:wrap;
+}
+
+.player-score{
+    padding:10px 18px;
+    border-radius:12px;
+    background:#101a34;
+    font-weight:bold;
+}
+
+.p1-score{
+    color:#20d9ff;
+}
+
+.p2-score{
+    color:#ff58b2;
+}
+
+
+/* ================= GAME BOARD ================= */
+
+.board-area{
+    display:flex;
+    justify-content:center;
+    margin-top:25px;
+    overflow:auto;
+    padding:10px;
+}
+
+#gameBoard{
+    position:relative;
+
+    width:min(620px,90vw);
+    aspect-ratio:1;
+
+    background:rgba(5,10,25,.88);
+
+    border:1px solid #293656;
+    border-radius:20px;
+
+    box-shadow:
+    0 20px 60px rgba(0,0,0,.45);
+
+    user-select:none;
+    touch-action:none;
+}
+
+
+/* DOT */
+
+.dot{
+    position:absolute;
+
+    width:15px;
+    height:15px;
+
+    border-radius:50%;
+
+    background:#fff;
+
+    transform:translate(-50%,-50%);
+
+    z-index:10;
+
+    box-shadow:
+    0 0 10px rgba(255,255,255,.8);
+}
+
+
+/* LINE */
+
+.line{
+    position:absolute;
+
+    background:#35415f;
+
+    border-radius:10px;
+
+    z-index:5;
+
+    cursor:pointer;
+
+    transition:.15s;
+}
+
+.line:hover{
+    background:#20d9ff;
+
+    box-shadow:
+    0 0 14px rgba(32,217,255,.6);
+}
+
+.line.p1{
+    background:#20d9ff;
+
+    box-shadow:
+    0 0 10px rgba(32,217,255,.5);
+
+    cursor:default;
+}
+
+.line.p2{
+    background:#ff58b2;
+
+    box-shadow:
+    0 0 10px rgba(255,88,178,.5);
+
+    cursor:default;
+}
+
+.horizontal{
+    height:9px;
+}
+
+.vertical{
+    width:9px;
+}
+
+
+/* BOX */
+
+.box{
+    position:absolute;
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    border-radius:8px;
+
+    font-size:25px;
+    font-weight:bold;
+
+    z-index:2;
+}
+
+.box.p1{
+    color:#20d9ff;
+    background:rgba(32,217,255,.15);
+}
+
+.box.p2{
+    color:#ff58b2;
+    background:rgba(255,88,178,.15);
+}
+
+
+/* BOTTOM */
+
+.result{
+    text-align:center;
+    margin-top:18px;
+
+    font-size:24px;
+    font-weight:bold;
+
+    color:#ffd45c;
+}
+
+.back-btn{
+    display:block;
+    margin:18px auto;
+
+    padding:13px 25px;
+
+    border:0;
+    border-radius:11px;
+
+    color:#fff;
+    background:#273452;
+
+    cursor:pointer;
+}
+
+
+@media(max-width:800px){
+
+    body{
+        padding:15px;
+    }
+
+    .setup{
+        grid-template-columns:1fr;
+    }
+
+    .online-row{
+        grid-template-columns:1fr;
+    }
+
+    .header h1{
+        font-size:32px;
+    }
+
+}
+
+/* ================= AUTH / PROFILE ================= */
+
+.auth-section{
+    background:rgba(10,17,39,.90);
+    border:1px solid #2b385b;
+    border-radius:20px;
+    padding:20px 22px;
+    margin-bottom:18px;
+    box-shadow:0 15px 45px rgba(0,0,0,.35);
+    text-align:center;
+}
+
+.auth-signed-out .google-btn{
+    display:inline-flex;
+    align-items:center;
+    gap:12px;
+}
+
+.google-btn{
+    border:0;
+    border-radius:11px;
+    padding:13px 22px;
+    cursor:pointer;
+    font-weight:bold;
+    font-size:15px;
+    background:#ffffff;
+    color:#3c4043;
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    box-shadow:0 4px 14px rgba(0,0,0,.30);
+    transition:.2s;
+}
+
+.google-btn:hover{
+    transform:translateY(-2px);
+    box-shadow:0 8px 22px rgba(0,0,0,.40);
+}
+
+.google-btn .gicon{
+    width:20px;
+    height:20px;
+    display:inline-flex;
+    justify-content:center;
+    align-items:center;
+    font-weight:bold;
+    color:#4285f4;
+    background:#fff;
+    border-radius:4px;
+}
+
+.auth-signed-in{
+    display:flex;
+    align-items:center;
+    gap:15px;
+    justify-content:center;
+    flex-wrap:wrap;
+}
+
+.auth-avatar{
+    width:52px;
+    height:52px;
+    border-radius:50%;
+    object-fit:cover;
+    border:2px solid #20d9ff;
+    box-shadow:0 0 14px rgba(32,217,255,.4);
+}
+
+.auth-meta{
+    text-align:left;
+}
+
+.auth-meta .auth-name{
+    font-weight:bold;
+    font-size:17px;
+}
+
+.auth-meta .auth-username{
+    color:#aab5d1;
+    font-size:14px;
+}
+
+.view-profile-btn{
+    border:0;
+    border-radius:11px;
+    padding:12px 18px;
+    cursor:pointer;
+    font-weight:bold;
+    color:#fff;
+    background:#273452;
+    transition:.2s;
+}
+
+.view-profile-btn:hover{
+    border-color:#20d9ff;
+}
+
+.avatar{
+    width:34px;
+    height:34px;
+    border-radius:50%;
+    object-fit:cover;
+    vertical-align:middle;
+    margin-right:8px;
+    border:1px solid #2b385b;
+}
+
+.avatar-fallback{
+    display:inline-flex;
+    justify-content:center;
+    align-items:center;
+    width:34px;
+    height:34px;
+    border-radius:50%;
+    background:#101a34;
+    color:#fff;
+    font-weight:bold;
+    margin-right:8px;
+    vertical-align:middle;
+}
+
+.p1-score .avatar,
+.p1-score .avatar-fallback{
+    border-color:#20d9ff;
+    box-shadow:0 0 10px rgba(32,217,255,.4);
+}
+
+.p2-score .avatar,
+.p2-score .avatar-fallback{
+    border-color:#ff58b2;
+    box-shadow:0 0 10px rgba(255,88,178,.4);
+}
+
+.modal-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(2,5,15,.80);
+    display:none;
+    justify-content:center;
+    align-items:center;
+    padding:20px;
+    z-index:100;
+}
+
+.modal-overlay.open{
+    display:flex;
+}
+
+.modal{
+    width:min(440px,100%);
+    background:rgba(10,17,39,.98);
+    border:1px solid #2b385b;
+    border-radius:20px;
+    padding:26px;
+    box-shadow:0 25px 70px rgba(0,0,0,.55);
+    max-height:90vh;
+    overflow:auto;
+}
+
+.modal h2{
+    text-align:center;
+    margin-top:0;
+}
+
+.modal-photo{
+    width:90px;
+    height:90px;
+    border-radius:50%;
+    object-fit:cover;
+    display:block;
+    margin:0 auto 12px;
+    border:3px solid #20d9ff;
+    box-shadow:0 0 18px rgba(32,217,255,.4);
+}
+
+.modal-name{
+    text-align:center;
+    font-weight:bold;
+    font-size:20px;
+}
+
+.modal-username{
+    text-align:center;
+    color:#aab5d1;
+    margin-bottom:16px;
+}
+
+.modal-stats{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-bottom:18px;
+}
+
+.stat-box{
+    background:#101a34;
+    border-radius:12px;
+    padding:10px;
+    text-align:center;
+}
+
+.stat-box .label{
+    color:#aab5d1;
+    font-size:12px;
+}
+
+.stat-box .value{
+    font-weight:bold;
+    font-size:18px;
+}
+
+.modal-field{
+    margin-bottom:12px;
+    text-align:left;
+}
+
+.modal-field label{
+    display:block;
+    color:#aab5d1;
+    font-size:13px;
+    margin-bottom:5px;
+}
+
+.modal-field input,
+.modal-field textarea{
+    width:100%;
+    padding:12px;
+    border-radius:11px;
+    border:1px solid #354263;
+    background:#070d20;
+    color:#fff;
+    outline:none;
+    font-size:14px;
+    font-family:inherit;
+}
+
+.modal-field input:focus,
+.modal-field textarea:focus{
+    border-color:#20d9ff;
+}
+
+.modal-error{
+    color:#ff63b5;
+    min-height:18px;
+    font-size:13px;
+    margin-bottom:8px;
+    text-align:left;
+}
+
+.modal-actions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:center;
+    margin-top:10px;
+}
+
+.modal-actions .btn{
+    flex:1;
+    min-width:120px;
+}
+
+.edit-btn{
+    background:linear-gradient(90deg,#078cff,#d52cb5);
+}
+
+.close-btn{
+    background:#273452;
+}
+
+.signout-btn{
+    background:#3a2030;
+}
+
+</style>
+</head>
+
+
+<body>
+
+<div class="container">
+
+<div class="header">
+
+<h1>DOTS BATTLE</h1>
+
+<p>Classic strategy • Online multiplayer</p>
+
+</div>
+
+
+<!-- ================= SETUP ================= -->
+
+<div id="setupScreen">
+
+<!-- ================= AUTH ================= -->
+<div class="auth-section" id="authSection">
+
+    <div id="authSignedOut" class="auth-signed-out">
+        <button type="button" class="google-btn" id="googleSignIn">
+            <span class="gicon">G</span>
+            🔐 Sign in with Google
+        </button>
+    </div>
+
+    <div id="authSignedIn" class="auth-signed-in" style="display:none;">
+        <img id="authAvatar" class="auth-avatar" alt="avatar">
+        <div class="auth-meta">
+            <div class="auth-name" id="authName">Player</div>
+            <div class="auth-username" id="authUsername">@player</div>
+        </div>
+        <button type="button" class="view-profile-btn" id="viewProfile">View Profile</button>
+    </div>
+
+</div>
+
+<div class="setup">
+
+
+<!-- PLAYER 1 -->
+
+<div class="card player1">
+
+<h2>🔵 PLAYER 1</h2>
+
+<input
+    id="player1Name"
+    type="text"
+    placeholder="Enter your name"
+>
+
+</div>
+
+
+<!-- BOARD SIZE -->
+
+<div class="card">
+
+<h2>SELECT BOARD SIZE</h2>
+
+<div class="board-options">
+
+<button
+    type="button"
+    class="size-btn"
+    data-size="3"
+>
+    3 × 3
+    <small>4 Boxes</small>
+</button>
+
+<button
+    type="button"
+    class="size-btn selected"
+    data-size="4"
+>
+    4 × 4
+    <small>9 Boxes</small>
+</button>
+
+<button
+    type="button"
+    class="size-btn"
+    data-size="5"
+>
+    5 × 5
+    <small>16 Boxes</small>
+</button>
+
+<button
+    type="button"
+    class="size-btn"
+    data-size="6"
+>
+    6 × 6
+    <small>25 Boxes</small>
+</button>
+
+</div>
+
+</div>
+
+
+<!-- PLAYER 2 -->
+
+<div class="card player2">
+
+<h2>💗 PLAYER 2</h2>
+
+<input
+    id="player2Name"
+    type="text"
+    placeholder="Friend's name"
+>
+
+</div>
+
+</div>
+
+
+<!-- ONLINE -->
+
+<div class="card online">
+
+<h2>🌐 PLAY ONLINE</h2>
+
+<p>
+Create a room and send the code to your friend.
+</p>
+
+<div class="online-row">
+
+<button
+    type="button"
+    class="btn create-btn"
+    id="createRoom"
+>
+CREATE ROOM
+</button>
+
+<input
+    id="roomInput"
+    type="text"
+    placeholder="Enter room code"
+>
+
+<button
+    type="button"
+    class="btn join-btn"
+    id="joinRoom"
+>
+JOIN
+</button>
+
+</div>
+
+<div
+    class="status"
+    id="status"
+></div>
+
+</div>
+
+</div>
+
+
+<!-- ================= GAME ================= -->
+
+<div
+    id="gameScreen"
+    class="game"
+>
+
+<div class="game-header">
+
+<div class="room">
+
+ROOM:
+<span id="roomDisplay"></span>
+
+</div>
+
+
+<div
+    class="turn"
+    id="turnDisplay"
+>
+Waiting...
+</div>
+
+
+<div class="players">
+
+<div class="player-score p1-score">
+<span id="p1AvatarWrap"></span>
+<span id="p1Display">
+Player 1
+</span>
+
+:
+<span id="p1Score">
+0
+</span>
+
+</div>
+
+
+<div class="player-score p2-score">
+<span id="p2AvatarWrap"></span>
+<span id="p2Display">
+Player 2
+</span>
+
+:
+<span id="p2Score">
+0
+</span>
+
+</div>
+
+</div>
+
+</div>
+
+
+<div class="board-area">
+
+<div id="gameBoard"></div>
+
+</div>
+
+
+<div
+    class="result"
+    id="result"
+></div>
+
+
+<button
+    type="button"
+    class="back-btn"
+    id="backHome"
+>
+    BACK TO HOME
+</button>
+
+</div>
+
+
+<!-- ================= PROFILE MODAL ================= -->
+<div class="modal-overlay" id="profileModal">
+    <div class="modal">
+        <img id="modalPhoto" class="modal-photo" alt="profile">
+        <div class="modal-name" id="modalName"></div>
+        <div class="modal-username" id="modalUsername"></div>
+
+        <div class="modal-stats">
+            <div class="stat-box"><div class="value" id="statGames">0</div><div class="label">Games</div></div>
+            <div class="stat-box"><div class="value" id="statWins">0</div><div class="label">Wins</div></div>
+            <div class="stat-box"><div class="value" id="statLosses">0</div><div class="label">Losses</div></div>
+            <div class="stat-box"><div class="value" id="statDraws">0</div><div class="label">Draws</div></div>
+            <div class="stat-box"><div class="value" id="statRate">0%</div><div class="label">Win Rate</div></div>
+            <div class="stat-box"><div class="value" id="statBoxes">0</div><div class="label">Boxes</div></div>
+            <div class="stat-box"><div class="value" id="statStreak">0</div><div class="label">Streak</div></div>
+            <div class="stat-box"><div class="value" id="statBest">0</div><div class="label">Best</div></div>
+        </div>
+
+        <div id="editFields" style="display:none;">
+            <div class="modal-field">
+                <label>Username</label>
+                <input id="editUsername" type="text" maxlength="20">
+            </div>
+            <div class="modal-field">
+                <label>Display Name</label>
+                <input id="editDisplayName" type="text" maxlength="40">
+            </div>
+            <div class="modal-field">
+                <label>Bio</label>
+                <textarea id="editBio" rows="3" maxlength="200"></textarea>
+            </div>
+            <div class="modal-error" id="modalError"></div>
+        </div>
+
+        <div class="modal-actions">
+            <button type="button" class="btn edit-btn" id="editProfileBtn">✏️ Edit Profile</button>
+            <button type="button" class="btn signout-btn" id="signOutBtn">🚪 Sign Out</button>
+            <button type="button" class="btn close-btn" id="closeModalBtn">✕ Close</button>
+        </div>
+    </div>
+</div>
+
+
+</div>
+
+<script>
+
+/* =====================================================
+   IMPORTANT:
+   Ye version pehle LOCAL game ko 100% working rakhta hai.
+   Online Firebase part neeche hai.
+===================================================== */
+
+
+/* ================= VARIABLES ================= */
+
+let selectedSize = 4;
+
+let roomCode = "";
+
+let myPlayer = "";
+
+let game = null;
+
+let firebaseLoaded = false;
+
+let currentUser = null;
+
+let myProfile = null;
+
+let resultRecorded = false;
+
+
+/* ================= SIZE BUTTONS ================= */
+
+const sizeButtons =
+document.querySelectorAll(".size-btn");
+
+
+sizeButtons.forEach(button => {
+
+    button.addEventListener("click", function(){
+
+        sizeButtons.forEach(btn => {
+
+            btn.classList.remove("selected");
+
+        });
+
+        this.classList.add("selected");
+
+        selectedSize =
+        Number(this.dataset.size);
+
+        document.getElementById("status")
+        .textContent =
+        "Selected: " +
+        selectedSize +
+        " × " +
+        selectedSize;
+
+    });
+
+});
+
+
+/* ================= FIREBASE LOAD ================= */
+
+const firebaseScript =
+document.createElement("script");
+
+firebaseScript.src =
+"https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js";
+
+firebaseScript.onload = () => {
+
+    const databaseScript =
+    document.createElement("script");
+
+    databaseScript.src =
+    "https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js";
+
+    databaseScript.onload = () => {
+
+        const authScript =
+        document.createElement("script");
+
+        authScript.src =
+        "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js";
+
+        authScript.onload = () => {
+
+            firebaseLoaded = true;
+
+            initializeFirebase();
+            setupAuth();
+
+        };
+
+        document.head.appendChild(authScript);
+
+    };
+
+    document.head.appendChild(databaseScript);
+
+};
+
+document.head.appendChild(firebaseScript);
+
+
+/* ================= FIREBASE ================= */
+
+let db = null;
+
+
+function initializeFirebase(){
+
+    const firebaseConfig = {
+
+        apiKey:
+        "AIzaSyDBcTvM0MIhmKwx8x57QvGNWWhY1px8",
+
+        authDomain:
+        "dots-and-boxes-60439.firebaseapp.com",
+
+        databaseURL:
+        "https://dots-and-boxes-60439-default-rtdb.firebaseio.com",
+
+        projectId:
+        "dots-and-boxes-60439",
+
+        storageBucket:
+        "dots-and-boxes-60439.firebasestorage.app",
+
+        messagingSenderId:
+        "435400230088",
+
+        appId:
+        "1:435400230088:web:834195f25c120b698911fd"
+
+    };
+
+
+        firebase.initializeApp(firebaseConfig);
+
+    db = firebase.database();
+
+}
+
+
+/* ================= AUTHENTICATION ================= */
+
+function setStatus(msg){
+    const el = document.getElementById("status");
+    if(el) el.textContent = msg;
+}
+
+
+/* ================= GOOGLE SIGN-IN ================= */
+
+function signInWithGoogle(){
+
+    if(!firebaseLoaded || !firebase.auth){
+        setStatus("⏳ Firebase loading... please wait.");
+        return;
+    }
+
+    const provider = new firebase.auth.GoogleAuthProvider();
+
+    firebase.auth().signInWithPopup(provider)
+        .then(() => {
+            /* handled by onAuthStateChanged */
+        })
+        .catch(error => {
+            console.error(error);
+            setStatus("❌ Google sign-in failed: " + error.message);
+        });
+
+}
+
+
+/* ================= SIGN OUT ================= */
+
+function signOutUser(){
+
+    if(!firebase.auth) return;
+
+    firebase.auth().signOut()
+        .then(() => {
+            currentUser = null;
+            myProfile = null;
+            renderAuthState();
+            closeProfileModal();
+        })
+        .catch(error => {
+            console.error(error);
+        });
+
+}
+
+
+/* ================= AUTH STATE ================= */
+
+function setupAuth(){
+    firebase.auth().onAuthStateChanged(handleAuthState);
+}
+
+
+async function handleAuthState(user){
+
+    currentUser = user || null;
+
+    if(user){
+        await createOrLoadProfile(user);
+    }
+
+    renderAuthState();
+
+}
+
+
+/* ================= USER PROFILE ================= */
+
+async function createOrLoadProfile(user){
+
+    const ref = db.ref("players/" + user.uid);
+
+    try{
+        const snapshot = await ref.once("value");
+
+        if(!snapshot.exists()){
+            const profile = buildNewProfile(user);
+            await ref.set(profile);
+            myProfile = profile;
+        }
+        else{
+            const existing = snapshot.val();
+            const updates = {
+                displayName: user.displayName || existing.displayName || "Player",
+                photoURL: user.photoURL || existing.photoURL || "",
+                email: user.email || existing.email || "",
+                lastLogin: Date.now()
+            };
+            await ref.update(updates);
+            myProfile = Object.assign({}, existing, updates);
+        }
+
+        renderAuthState();
+    }
+    catch(error){
+        console.error(error);
+    }
+
+}
+
+
+function buildNewProfile(user){
+
+    const displayName = user.displayName || "Player";
+    const baseUsername = generateUsername(displayName);
+
+    return {
+        uid: user.uid,
+        displayName: displayName,
+        username: baseUsername,
+        photoURL: user.photoURL || "",
+        email: user.email || "",
+        bio: "",
+        createdAt: Date.now(),
+        lastLogin: Date.now(),
+        stats: {
+            totalGames: 0,
+            wins: 0,
+            losses: 0,
+            draws: 0,
+            totalBoxes: 0,
+            currentWinStreak: 0,
+            bestWinStreak: 0
+        }
+    };
+
+}
+
+
+function generateUsername(displayName){
+
+    let base = (displayName || "")
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, "")
+        .substring(0, 20);
+
+    if(base.length < 3){
+        base = (base + "player").substring(0, 20);
+    }
+
+    return base;
+
+}
+
+
+/* ================= PROFILE FIREBASE ================= */
+
+async function isUsernameTaken(username, exceptUid){
+
+    const snapshot = await db.ref("players").once("value");
+    const data = snapshot.val() || {};
+
+    for(const uid in data){
+        if(exceptUid && uid === exceptUid) continue;
+        const p = data[uid];
+        if(p && p.username &&
+           p.username.toLowerCase() === username.toLowerCase()){
+            return true;
+        }
+    }
+
+    return false;
+
+}
+
+
+function validateUsername(username){
+
+    username = (username || "").trim();
+
+    if(username.length < 3 || username.length > 20){
+        return "Username must be 3-20 characters.";
+    }
+
+    if(!/^[a-z0-9_]+$/.test(username)){
+        return "Only letters, numbers and underscore allowed.";
+    }
+
+    return "";
+
+}
+
+
+async function saveProfile(){
+
+    if(!currentUser) return;
+
+    const newUsername = (document.getElementById("editUsername").value || "").trim();
+    const newName = (document.getElementById("editDisplayName").value || "").trim();
+    const newBio = (document.getElementById("editBio").value || "").trim();
+
+    const err = validateUsername(newUsername);
+    if(err){
+        document.getElementById("modalError").textContent = err;
+        return;
+    }
+
+    if(!newName){
+        document.getElementById("modalError").textContent = "Display name cannot be empty.";
+        return;
+    }
+
+    if(await isUsernameTaken(newUsername, currentUser.uid)){
+        document.getElementById("modalError").textContent = "Username already taken.";
+        return;
+    }
+
+    const updates = {
+        username: newUsername,
+        displayName: newName,
+        bio: newBio
+    };
+
+    try{
+        await db.ref("players/" + currentUser.uid).update(updates);
+        Object.assign(myProfile, updates);
+        document.getElementById("modalError").textContent = "";
+        showProfileModal();
+    }
+    catch(error){
+        console.error(error);
+        document.getElementById("modalError").textContent = "❌ Save failed.";
+    }
+
+}
+
+
+function loadProfile(){
+    return myProfile;
+}
+
+
+/* ================= GAME STATISTICS ================= */
+
+function updateGameStats(){
+
+    if(!currentUser || !game || !game.finished) return;
+    if(!game.gameId) return;
+    if(resultRecorded) return;
+
+    const mySlot = myPlayer;
+    if(!mySlot) return;
+
+    const myScore = Number(game.scores[mySlot]) || 0;
+    const oppSlot = mySlot === "p1" ? "p2" : "p1";
+    const oppScore = Number(game.scores[oppSlot]) || 0;
+
+    let result;
+    if(myScore > oppScore) result = "win";
+    else if(myScore < oppScore) result = "loss";
+    else result = "draw";
+
+    const gameId = game.gameId;
+    const uid = currentUser.uid;
+    const boxes = myScore;
+
+    resultRecorded = true;
+
+    const markerRef = db.ref("gameResults/" + gameId + "/" + uid);
+
+    markerRef.transaction(function(current){
+        if(current) return current;
+        return { recorded: true, result: result, boxes: boxes };
+    }).then(function(res){
+        if(res.committed){
+            return updateStats(uid, result, boxes);
+        }
+    }).catch(function(error){
+        console.error(error);
+        resultRecorded = false;
+    });
+
+}
+
+
+async function updateStats(uid, result, boxes){
+
+    const ref = db.ref("players/" + uid + "/stats");
+
+    await ref.transaction(function(s){
+
+        s = s || {
+            totalGames: 0,
+            wins: 0,
+            losses: 0,
+            draws: 0,
+            totalBoxes: 0,
+            currentWinStreak: 0,
+            bestWinStreak: 0
+        };
+
+        s.totalGames = (s.totalGames || 0) + 1;
+        s.totalBoxes = (s.totalBoxes || 0) + (boxes || 0);
+
+        if(result === "win"){
+            s.wins = (s.wins || 0) + 1;
+            s.currentWinStreak = (s.currentWinStreak || 0) + 1;
+            s.bestWinStreak = Math.max((s.bestWinStreak || 0), s.currentWinStreak);
+        }
+        else if(result === "loss"){
+            s.losses = (s.losses || 0) + 1;
+            s.currentWinStreak = 0;
+        }
+        else{
+            s.draws = (s.draws || 0) + 1;
+            s.currentWinStreak = 0;
+        }
+
+        return s;
+
+    });
+
+}
+
+
+/* ================= PLAYER INFO HELPERS ================= */
+
+function getPlayerInfo(slot){
+    const p = game && game.players ? game.players[slot] : null;
+    if(!p) return { name: "", username: "", photoURL: "", uid: "" };
+    if(typeof p === "string") return { name: p, username: "", photoURL: "", uid: "" };
+    return {
+        name: p.name || "",
+        username: p.username || "",
+        photoURL: p.photoURL || "",
+        uid: p.uid || ""
+    };
+}
+
+
+function renderAvatar(wrapEl, info){
+
+    while(wrapEl.firstChild){
+        wrapEl.removeChild(wrapEl.firstChild);
+    }
+
+    if(info.photoURL){
+        const img = document.createElement("img");
+        img.src = info.photoURL;
+        img.className = "avatar";
+        img.alt = "";
+        wrapEl.appendChild(img);
+    }
+    else{
+        const span = document.createElement("span");
+        span.className = "avatar-fallback";
+        span.textContent = (info.name || "?").charAt(0).toUpperCase();
+        wrapEl.appendChild(span);
+    }
+
+}
+
+
+function buildPlayerObject(nameFallback){
+
+    if(currentUser && myProfile){
+        return {
+            uid: currentUser.uid,
+            name: myProfile.displayName,
+            username: myProfile.username,
+            photoURL: myProfile.photoURL
+        };
+    }
+
+    return { name: nameFallback };
+
+}
+
+
+/* ================= PROFILE UI ================= */
+
+function renderAuthState(){
+
+    const signedOut = document.getElementById("authSignedOut");
+    const signedIn = document.getElementById("authSignedIn");
+
+    if(currentUser && myProfile){
+
+        signedOut.style.display = "none";
+        signedIn.style.display = "flex";
+
+        const avatar = document.getElementById("authAvatar");
+        if(myProfile.photoURL){
+            avatar.src = myProfile.photoURL;
+            avatar.style.display = "";
+        }
+        else{
+            avatar.style.display = "none";
+        }
+
+        document.getElementById("authName").textContent =
+            myProfile.displayName || currentUser.displayName || "Player";
+
+        document.getElementById("authUsername").textContent =
+            "@" + (myProfile.username || "");
+
+    }
+    else{
+        signedOut.style.display = "block";
+        signedIn.style.display = "none";
+    }
+
+}
+
+
+function renderUserProfile(){
+    renderAuthState();
+}
+
+
+function showProfileModal(){
+
+    if(!currentUser || !myProfile){
+        return;
+    }
+
+    const p = myProfile;
+
+    const photo = document.getElementById("modalPhoto");
+    if(p.photoURL){
+        photo.src = p.photoURL;
+        photo.style.display = "";
+    }
+    else{
+        photo.style.display = "none";
+    }
+
+    document.getElementById("modalName").textContent = p.displayName || "";
+    document.getElementById("modalUsername").textContent = "@" + (p.username || "");
+
+    const s = p.stats || {};
+    const games = s.totalGames || 0;
+    const wins = s.wins || 0;
+    const losses = s.losses || 0;
+    const draws = s.draws || 0;
+    const rate = games ? Math.round((wins / games) * 100) : 0;
+
+    document.getElementById("statGames").textContent = games;
+    document.getElementById("statWins").textContent = wins;
+    document.getElementById("statLosses").textContent = losses;
+    document.getElementById("statDraws").textContent = draws;
+    document.getElementById("statRate").textContent = rate + "%";
+    document.getElementById("statBoxes").textContent = s.totalBoxes || 0;
+    document.getElementById("statStreak").textContent = s.currentWinStreak || 0;
+    document.getElementById("statBest").textContent = s.bestWinStreak || 0;
+
+    document.getElementById("editUsername").value = p.username || "";
+    document.getElementById("editDisplayName").value = p.displayName || "";
+    document.getElementById("editBio").value = p.bio || "";
+
+    document.getElementById("editFields").style.display = "none";
+    document.getElementById("modalError").textContent = "";
+
+    const editBtn = document.getElementById("editProfileBtn");
+    if(editBtn) editBtn.textContent = "✏️ Edit Profile";
+
+    document.getElementById("profileModal").classList.add("open");
+
+}
+
+
+function closeProfileModal(){
+    document.getElementById("profileModal").classList.remove("open");
+    document.getElementById("editFields").style.display = "none";
+}
+
+
+function toggleEditMode(){
+
+    const fields = document.getElementById("editFields");
+    const editBtn = document.getElementById("editProfileBtn");
+
+    if(fields.style.display === "none"){
+        fields.style.display = "block";
+        if(editBtn) editBtn.textContent = "💾 Save";
+    }
+    else{
+        fields.style.display = "none";
+        if(editBtn) editBtn.textContent = "✏️ Edit Profile";
+    }
+
+}
+
+
+/* ================= EVENT LISTENERS ================= */
+
+document.getElementById("googleSignIn")
+.addEventListener("click", signInWithGoogle);
+
+document.getElementById("viewProfile")
+.addEventListener("click", showProfileModal);
+
+document.getElementById("closeModalBtn")
+.addEventListener("click", closeProfileModal);
+
+document.getElementById("signOutBtn")
+.addEventListener("click", signOutUser);
+
+document.getElementById("editProfileBtn")
+.addEventListener("click", function(){
+    const fields = document.getElementById("editFields");
+    if(fields.style.display === "none"){
+        toggleEditMode();
+    }
+    else{
+        saveProfile();
+    }
+});
+
+document.getElementById("profileModal")
+.addEventListener("click", function(e){
+    if(e.target === this){
+        closeProfileModal();
+    }
+});
+
+
+/* ================= CREATE ROOM ================= */
+
+document
+.getElementById("createRoom")
+.addEventListener("click", async function(){
+
+    const name =
+    document.getElementById("player1Name")
+    .value
+    .trim();
+
+
+    if(!currentUser && !name){
+
+        document.getElementById("status")
+        .textContent =
+        "⚠️ Player 1 ka naam enter karo (ya Google se sign in karo).";
+
+        return;
+
+    }
+
+
+    if(!firebaseLoaded){
+
+        document.getElementById("status")
+        .textContent =
+        "⏳ Firebase loading... 1 second wait karo.";
+
+        return;
+
+    }
+
+
+    roomCode =
+    Math.random()
+    .toString(36)
+    .substring(2,8)
+    .toUpperCase();
+
+
+    myPlayer = "p1";
+
+
+    game = {
+
+        size:selectedSize,
+
+        gameId:roomCode,
+
+        players:{
+            p1:buildPlayerObject(name),
+            p2:""
+        },
+
+        scores:{
+            p1:0,
+            p2:0
+        },
+
+        turn:"p1",
+
+        lines:{},
+
+        boxes:{},
+
+        finished:false
+
+    };
+
+
+    try{
+
+        await db
+        .ref("rooms/"+roomCode)
+        .set(game);
+
+
+        openGame();
+
+        listenRoom();
+
+    }
+    catch(error){
+
+        console.error(error);
+
+        document.getElementById("status")
+        .textContent =
+        "❌ Room create error.";
+
+    }
+
+});
+
+
+/* ================= JOIN ROOM ================= */
+
+document
+.getElementById("joinRoom")
+.addEventListener("click", async function(){
+
+    const code =
+    document.getElementById("roomInput")
+    .value
+    .trim()
+    .toUpperCase();
+
+
+    const name =
+    document.getElementById("player2Name")
+    .value
+    .trim();
+
+
+    if(!code){
+
+        document.getElementById("status")
+        .textContent =
+        "⚠️ Room code enter karo.";
+
+        return;
+
+    }
+
+
+    if(!currentUser && !name){
+
+        document.getElementById("status")
+        .textContent =
+        "⚠️ Player 2 ka naam enter karo (ya Google se sign in karo).";
+
+        return;
+
+    }
+
+
+    if(!firebaseLoaded){
+
+        document.getElementById("status")
+        .textContent =
+        "⏳ Firebase loading...";
+
+        return;
+
+    }
+
+
+    try{
+
+        const snapshot =
+        await db
+        .ref("rooms/"+code)
+        .once("value");
+
+
+        if(!snapshot.exists()){
+
+            document.getElementById("status")
+            .textContent =
+            "❌ Room nahi mila.";
+
+            return;
+
+        }
+
+
+        const data =
+        snapshot.val();
+
+
+        if(data.players.p2){
+
+            document.getElementById("status")
+            .textContent =
+            "❌ Room already full hai.";
+
+            return;
+
+        }
+
+
+        roomCode = code;
+
+        myPlayer = "p2";
+
+
+        await db
+        .ref(
+            "rooms/"+roomCode+
+            "/players/p2"
+        )
+        .set(buildPlayerObject(name));
+
+
+        openGame();
+
+        listenRoom();
+
+    }
+    catch(error){
+
+        console.error(error);
+
+        document.getElementById("status")
+        .textContent =
+        "❌ Join error.";
+
+    }
+
+});
+
+
+/* ================= OPEN GAME ================= */
+
+function openGame(){
+
+    resultRecorded = false;
+
+    document
+    .getElementById("setupScreen")
+    .style.display =
+    "none";
+
+
+    document
+    .getElementById("gameScreen")
+    .style.display =
+    "block";
+
+
+    document
+    .getElementById("roomDisplay")
+    .textContent =
+    roomCode;
+
+}
+
+
+/* ================= LISTEN ================= */
+
+function listenRoom(){
+
+    db
+    .ref("rooms/"+roomCode)
+    .on("value", snapshot => {
+
+        if(!snapshot.exists()){
+
+            return;
+
+        }
+
+
+        game =
+        snapshot.val();
+
+
+        renderGame();
+
+    });
+
+}
+
+
+/* ================= RENDER ================= */
+
+function renderGame(){
+
+    const p1 = getPlayerInfo("p1");
+    const p2 = getPlayerInfo("p2");
+
+    renderAvatar(
+        document.getElementById("p1AvatarWrap"),
+        p1
+    );
+
+    renderAvatar(
+        document.getElementById("p2AvatarWrap"),
+        p2
+    );
+
+    document
+    .getElementById("p1Display")
+    .textContent =
+    p1.name || "Player 1";
+
+
+    document
+    .getElementById("p2Display")
+    .textContent =
+    p2.name ||
+    "Waiting...";
+
+
+    document
+    .getElementById("p1Score")
+    .textContent =
+    game.scores.p1;
+
+
+    document
+    .getElementById("p2Score")
+    .textContent =
+    game.scores.p2;
+
+
+    if(!game.players.p2 || (typeof game.players.p2 === "string" && !game.players.p2)){
+
+        document
+        .getElementById("turnDisplay")
+        .textContent =
+        "⏳ Waiting for Player 2...";
+
+    }
+
+    else if(game.finished){
+
+        showWinner();
+        updateGameStats();
+
+    }
+
+    else if(game.turn === myPlayer){
+
+        document
+        .getElementById("turnDisplay")
+        .textContent =
+        "🟢 YOUR TURN";
+
+    }
+
+    else{
+
+        const name =
+        game.turn === "p1"
+        ? p1.name
+        : p2.name;
+
+
+        document
+        .getElementById("turnDisplay")
+        .textContent =
+        "🔴 "+(name || "Player")+"'S TURN";
+
+    }
+
+
+    drawBoard();
+
+}
+
+
+/* ================= DRAW BOARD ================= */
+
+function drawBoard(){
+
+    const board =
+    document.getElementById("gameBoard");
+
+
+    board.innerHTML = "";
+
+
+    const n =
+    Number(game.size);
+
+
+    const width =
+    Math.min(
+        600,
+        window.innerWidth - 50
+    );
+
+
+    const gap =
+    width / (n-1);
+
+
+    board.style.width =
+    width+"px";
+
+
+    board.style.height =
+    width+"px";
+
+
+    /* ================= BOXES ================= */
+
+    if(game.boxes){
+
+        Object.keys(game.boxes)
+        .forEach(key => {
+
+            const parts =
+            key.split("_");
+
+
+            const r =
+            Number(parts[0]);
+
+
+            const c =
+            Number(parts[1]);
+
+
+            const box =
+            document.createElement("div");
+
+
+            box.className =
+            "box "+
+            game.boxes[key];
+
+
+            box.style.left =
+            (c*gap+8)+"px";
+
+
+            box.style.top =
+            (r*gap+8)+"px";
+
+
+            box.style.width =
+            (gap-16)+"px";
+
+
+            box.style.height =
+            (gap-16)+"px";
+
+
+            const owner =
+            game.boxes[key];
+
+
+            const info =
+            getPlayerInfo(owner);
+
+
+            const playerName =
+            info.name;
+
+
+            box.textContent =
+            playerName
+            ? playerName.charAt(0).toUpperCase()
+            : "";
+
+
+            board.appendChild(box);
+
+        });
+
+    }
+
+
+    /* ================= HORIZONTAL ================= */
+
+    for(let r=0;r<n;r++){
+
+        for(let c=0;c<n-1;c++){
+
+            const key =
+            "h_"+r+"_"+c;
+
+
+            createLine(
+                key,
+                c*gap,
+                r*gap-4,
+                gap,
+                9,
+                "horizontal"
+            );
+
+        }
+
+    }
+
+
+    /* ================= VERTICAL ================= */
+
+    for(let r=0;r<n-1;r++){
+
+        for(let c=0;c<n;c++){
+
+            const key =
+            "v_"+r+"_"+c;
+
+
+            createLine(
+                key,
+                c*gap-4,
+                r*gap,
+                9,
+                gap,
+                "vertical"
+            );
+
+        }
+
+    }
+
+
+    /* ================= DOTS ================= */
+
+    for(let r=0;r<n;r++){
+
+        for(let c=0;c<n;c++){
+
+            const dot =
+            document.createElement("div");
+
+
+            dot.className =
+            "dot";
+
+
+            dot.style.left =
+            c*gap+"px";
+
+
+            dot.style.top =
+            r*gap+"px";
+
+
+            board.appendChild(dot);
+
+        }
+
+    }
+
+}
+
+
+/* ================= CREATE LINE ================= */
+
+function createLine(
+    key,
+    left,
+    top,
+    width,
+    height,
+    type
+){
+
+    const line =
+    document.createElement("div");
+
+
+    line.className =
+    "line "+type;
+
+
+    line.style.left =
+    left+"px";
+
+
+    line.style.top =
+    top+"px";
+
+
+    line.style.width =
+    width+"px";
+
+
+    line.style.height =
+    height+"px";
+
+
+    if(game.lines &&
+       game.lines[key]){
+
+        line.classList.add(
+            game.lines[key]
+        );
+
+    }
+
+    else{
+
+        line.addEventListener(
+            "click",
+            function(){
+
+                makeMove(key);
+
+            }
+        );
+
+    }
+
+
+    document
+    .getElementById("gameBoard")
+    .appendChild(line);
+
+}
+
+
+/* ================= MAKE MOVE ================= */
+
+async function makeMove(key){
+
+    if(!game) return;
+
+
+    if(!game.players.p2) return;
+
+
+    if(game.finished) return;
+
+
+    /* ONLY CURRENT PLAYER */
+
+    if(game.turn !== myPlayer){
+
+        return;
+
+    }
+
+
+    /* LINE ALREADY USED */
+
+    if(game.lines &&
+       game.lines[key]){
+
+        return;
+
+    }
+
+
+    const roomRef =
+    db.ref("rooms/"+roomCode);
+
+
+    await roomRef.transaction(
+    function(current){
+
+        if(!current) return current;
+
+
+        /* SERVER-SIDE TURN CHECK */
+
+        if(current.turn !== myPlayer){
+
+            return;
+
+        }
+
+
+        if(current.finished){
+
+            return;
+
+        }
+
+
+        if(!current.lines){
+
+            current.lines = {};
+
+        }
+
+
+        if(current.lines[key]){
+
+            return;
+
+        }
+
+
+        if(!current.boxes){
+
+            current.boxes = {};
+
+        }
+
+
+        if(!current.scores){
+
+            current.scores = {
+                p1:0,
+                p2:0
+            };
+
+        }
+
+
+        /* DRAW LINE */
+
+        current.lines[key] =
+        myPlayer;
+
+
+        let boxesMade = 0;
+
+
+        const n =
+        Number(current.size);
+
+
+        /* CHECK ALL BOXES */
+
+        for(let r=0;r<n-1;r++){
+
+            for(let c=0;c<n-1;c++){
+
+                const boxKey =
+                r+"_"+c;
+
+
+                if(current.boxes[boxKey]){
+
+                    continue;
+
+                }
+
+
+                const top =
+                "h_"+r+"_"+c;
+
+
+                const bottom =
+                "h_"+(r+1)+"_"+c;
+
+
+                const left =
+                "v_"+r+"_"+c;
+
+
+                const right =
+                "v_"+r+"_"+(c+1);
+
+
+                if(
+                    current.lines[top] &&
+                    current.lines[bottom] &&
+                    current.lines[left] &&
+                    current.lines[right]
+                ){
+
+                    current.boxes[boxKey] =
+                    myPlayer;
+
+
+                    current.scores[myPlayer]++;
+
+
+                    boxesMade++;
+
+                }
+
+            }
+
+        }
+
+
+        /* ================= TURN LOGIC ================= */
+
+
+        /*
+            Box bana:
+            same player ka turn.
+
+            Box nahi bana:
+            opponent ka turn.
+        */
+
+        if(boxesMade === 0){
+
+            current.turn =
+            myPlayer === "p1"
+            ? "p2"
+            : "p1";
+
+        }
+
+
+        /* ================= FINISH ================= */
+
+        const totalBoxes =
+        Object.keys(
+            current.boxes
+        ).length;
+
+
+        const requiredBoxes =
+        (n-1)*(n-1);
+
+
+        if(
+            totalBoxes >=
+            requiredBoxes
+        ){
+
+            current.finished =
+            true;
+
+            current.turn =
+            "";
+
+        }
+
+
+        return current;
+
+    });
+
+}
+
+
+/* ================= WINNER ================= */
+
+function showWinner(){
+
+    let text = "";
+
+
+    if(
+        game.scores.p1 >
+        game.scores.p2
+    ){
+
+        text =
+        "🏆 "+
+        (getPlayerInfo("p1").name || "Player 1")+
+        " WINS!";
+
+    }
+
+    else if(
+        game.scores.p2 >
+        game.scores.p1
+    ){
+
+        text =
+        "🏆 "+
+        (getPlayerInfo("p2").name || "Player 2")+
+        " WINS!";
+
+    }
+
+    else{
+
+        text =
+        "🤝 DRAW!";
+
+    }
+
+
+    document
+    .getElementById("result")
+    .textContent =
+    text;
+
+
+    document
+    .getElementById("turnDisplay")
+    .textContent =
+    "🏁 GAME FINISHED";
+
+}
+
+
+/* ================= BACK ================= */
+
+document
+.getElementById("backHome")
+.addEventListener("click",function(){
+
+    location.reload();
+
+});
+
+
+/* ================= RESIZE ================= */
+
+window.addEventListener(
+"resize",
+function(){
+
+    if(game){
+
+        drawBoard();
+
+    }
+
+});
+
+</script>
+
+</body>
+</html>
