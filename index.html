@@ -1242,6 +1242,107 @@ input:focus{
     color:#20d9ff;
 }
 
+/* ================= MODE SELECTION ================= */
+
+.mode-title{
+    text-align:center;
+    margin-bottom:18px;
+    font-size:20px;
+    color:#20d9ff;
+}
+
+.mode-cards{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px;
+}
+
+.mode-card{
+    background:rgba(10,17,39,.92);
+    border:1px solid #2b385b;
+    border-radius:20px;
+    padding:18px 10px;
+    color:#fff;
+    cursor:pointer;
+    text-align:center;
+    box-shadow:0 15px 45px rgba(0,0,0,.35);
+    transition:.2s;
+}
+
+.mode-card:hover{
+    border-color:#20d9ff;
+    transform:translateY(-2px);
+}
+
+.mode-icon{
+    display:block;
+    font-size:32px;
+    margin-bottom:6px;
+}
+
+.mode-label{
+    display:block;
+    font-weight:bold;
+    font-size:15px;
+}
+
+.mode-sub{
+    display:block;
+    color:#aab5d1;
+    font-size:12px;
+    margin-top:4px;
+}
+
+.setup-screen{
+    max-width:620px;
+    margin:0 auto 18px;
+}
+
+.setup-screen .card{
+    margin-bottom:14px;
+}
+
+.setup-label{
+    display:block;
+    color:#aab5d1;
+    font-size:13px;
+    margin:10px 0 6px;
+}
+
+.difficulty-options{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+    margin-bottom:10px;
+}
+
+.diff-btn.selected{
+    border-color:#20d9ff;
+    background:linear-gradient(135deg,#123b50,#20254b);
+    box-shadow:0 0 18px rgba(32,217,255,.20);
+}
+
+.back-btn{
+    display:inline-block;
+    margin-top:10px;
+    padding:10px 18px;
+    border:0;
+    border-radius:11px;
+    color:#fff;
+    background:#273452;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+@media(max-width:800px){
+    .mode-cards{
+        grid-template-columns:1fr;
+    }
+    .difficulty-options{
+        grid-template-columns:1fr;
+    }
+}
+
 </style>
 </head>
 
@@ -1291,133 +1392,88 @@ input:focus{
     <button type="button" class="btn create-btn friends-open-btn" id="openFriends">Open Friends</button>
 </div>
 
-<div class="setup">
-
-
-<!-- PLAYER 1 -->
-
-<div class="card player1">
-
-<h2>🔵 PLAYER 1</h2>
-
-<input
-    id="player1Name"
-    type="text"
-    placeholder="Enter your name"
->
-
+<!-- ================= MODE SELECTION ================= -->
+<div id="modeScreen">
+    <h2 class="mode-title">HOW DO YOU WANT TO PLAY?</h2>
+    <div class="mode-cards">
+        <button type="button" class="mode-card" id="modeComputer" data-mode="computer">
+            <span class="mode-icon">🤖</span>
+            <span class="mode-label">VS COMPUTER</span>
+            <span class="mode-sub">Play against AI</span>
+        </button>
+        <button type="button" class="mode-card" id="modeOffline" data-mode="offline">
+            <span class="mode-icon">👥</span>
+            <span class="mode-label">FRIEND OFFLINE</span>
+            <span class="mode-sub">Two players, same device</span>
+        </button>
+        <button type="button" class="mode-card" id="modeOnline" data-mode="online">
+            <span class="mode-icon">🌐</span>
+            <span class="mode-label">PLAY ONLINE</span>
+            <span class="mode-sub">Play with another player</span>
+        </button>
+    </div>
 </div>
 
-
-<!-- BOARD SIZE -->
-
-<div class="card">
-
-<h2>SELECT BOARD SIZE</h2>
-
-<div class="board-options">
-
-<button
-    type="button"
-    class="size-btn"
-    data-size="3"
->
-    3 × 3
-    <small>4 Boxes</small>
-</button>
-
-<button
-    type="button"
-    class="size-btn selected"
-    data-size="4"
->
-    4 × 4
-    <small>9 Boxes</small>
-</button>
-
-<button
-    type="button"
-    class="size-btn"
-    data-size="5"
->
-    5 × 5
-    <small>16 Boxes</small>
-</button>
-
-<button
-    type="button"
-    class="size-btn"
-    data-size="6"
->
-    6 × 6
-    <small>25 Boxes</small>
-</button>
-
+<!-- ================= COMPUTER SETUP ================= -->
+<div id="computerSetup" class="setup-screen" style="display:none;">
+    <div class="card">
+        <h2>🤖 PLAY VS COMPUTER</h2>
+        <label class="setup-label">Your Name</label>
+        <input id="computerName" type="text" placeholder="Enter your name">
+        <label class="setup-label">Difficulty</label>
+        <div class="difficulty-options">
+            <button type="button" class="size-btn diff-btn" data-diff="easy">EASY</button>
+            <button type="button" class="size-btn diff-btn selected" data-diff="medium">MEDIUM</button>
+            <button type="button" class="size-btn diff-btn" data-diff="hard">HARD</button>
+        </div>
+        <label class="setup-label">Board Size</label>
+        <div class="board-options">
+            <button type="button" class="size-btn" data-size="3">3 × 3<small>4 Boxes</small></button>
+            <button type="button" class="size-btn selected" data-size="4">4 × 4<small>9 Boxes</small></button>
+            <button type="button" class="size-btn" data-size="5">5 × 5<small>16 Boxes</small></button>
+            <button type="button" class="size-btn" data-size="6">6 × 6<small>25 Boxes</small></button>
+        </div>
+        <button type="button" class="btn create-btn" id="startComputer" style="width:100%;margin-top:10px;">START GAME</button>
+        <button type="button" class="back-btn" id="backFromComputer">← BACK</button>
+    </div>
 </div>
 
+<!-- ================= OFFLINE SETUP ================= -->
+<div id="offlineSetup" class="setup-screen" style="display:none;">
+    <div class="card player1">
+        <h2>🔵 PLAYER 1</h2>
+        <input id="offlineP1Name" type="text" placeholder="Enter name">
+    </div>
+    <div class="card">
+        <h2>SELECT BOARD SIZE</h2>
+        <div class="board-options">
+            <button type="button" class="size-btn" data-size="3">3 × 3<small>4 Boxes</small></button>
+            <button type="button" class="size-btn selected" data-size="4">4 × 4<small>9 Boxes</small></button>
+            <button type="button" class="size-btn" data-size="5">5 × 5<small>16 Boxes</small></button>
+            <button type="button" class="size-btn" data-size="6">6 × 6<small>25 Boxes</small></button>
+        </div>
+    </div>
+    <div class="card player2">
+        <h2>💗 PLAYER 2</h2>
+        <input id="offlineP2Name" type="text" placeholder="Friend's name">
+    </div>
+    <button type="button" class="btn create-btn" id="startOffline" style="width:100%;margin-top:10px;">START GAME</button>
+    <button type="button" class="back-btn" id="backFromOffline">← BACK</button>
 </div>
 
-
-<!-- PLAYER 2 -->
-
-<div class="card player2">
-
-<h2>💗 PLAYER 2</h2>
-
-<input
-    id="player2Name"
-    type="text"
-    placeholder="Friend's name"
->
-
-</div>
-
-</div>
-
-
-<!-- ONLINE -->
-
-<div class="card online">
-
-<h2>🌐 PLAY ONLINE</h2>
-
-<p>
-Create a room and send the code to your friend.
-</p>
-
-<div class="online-row">
-
-<button
-    type="button"
-    class="btn create-btn"
-    id="createRoom"
->
-CREATE ROOM
-</button>
-
-<input
-    id="roomInput"
-    type="text"
-    placeholder="Enter room code"
->
-
-<button
-    type="button"
-    class="btn join-btn"
-    id="joinRoom"
->
-JOIN
-</button>
-
-</div>
-
-<div
-    class="status"
-    id="status"
-></div>
-
-</div>
-
+<!-- ================= ONLINE SETUP ================= -->
+<div id="onlineSetup" class="setup-screen" style="display:none;">
+    <div class="card online">
+        <h2>🌐 PLAY ONLINE</h2>
+        <p>Create a room and send the code to your friend.</p>
+        <div class="online-row">
+            <button type="button" class="btn create-btn" id="createRoom">CREATE ROOM</button>
+            <input id="roomInput" type="text" placeholder="Enter room code">
+            <button type="button" class="btn join-btn" id="joinRoom">JOIN</button>
+        </div>
+        <div class="status" id="status"></div>
+    </div>
+    <button type="button" class="back-btn" id="backFromOnline">← BACK</button>
 </div>
 
 
@@ -1426,6 +1482,7 @@ JOIN
 <div
     id="gameScreen"
     class="game"
+    style="display:none;"
 >
 
 <div class="game-header">
@@ -1668,6 +1725,14 @@ let chatFocused = false;
 
 let chatFinishAnnounced = false;
 
+let gameMode = "";
+
+let computerThinking = false;
+
+let computerTimer = null;
+
+let selectedDifficulty = "medium";
+
 
 /* ================= SIZE BUTTONS ================= */
 
@@ -1678,6 +1743,8 @@ document.querySelectorAll(".size-btn");
 sizeButtons.forEach(button => {
 
     button.addEventListener("click", function(){
+
+        if(!this.dataset.size) return;
 
         sizeButtons.forEach(btn => {
 
@@ -2357,23 +2424,6 @@ document
 .getElementById("createRoom")
 .addEventListener("click", async function(){
 
-    const name =
-    document.getElementById("player1Name")
-    .value
-    .trim();
-
-
-    if(!currentUser && !name){
-
-        document.getElementById("status")
-        .textContent =
-        "⚠️ Player 1 ka naam enter karo (ya Google se sign in karo).";
-
-        return;
-
-    }
-
-
     if(!firebaseLoaded){
 
         document.getElementById("status")
@@ -2384,13 +2434,22 @@ document
 
     }
 
+    if(!currentUser){
 
-    await createRoomCore(name);
+        document.getElementById("status")
+        .textContent =
+        "⚠️ Sign in with Google first.";
+
+        return;
+
+    }
+
+    await createRoomCore();
 
 });
 
 
-async function createRoomCore(name){
+async function createRoomCore(nameOverride){
 
     if(!firebaseLoaded) return false;
 
@@ -2403,6 +2462,11 @@ async function createRoomCore(name){
 
     myPlayer = "p1";
 
+    const name =
+    nameOverride ||
+    (myProfile && myProfile.displayName) ||
+    (currentUser && currentUser.displayName) ||
+    "Player";
 
     game = {
 
@@ -2471,28 +2535,11 @@ document
         .toUpperCase();
 
 
-        const name =
-        document.getElementById("player2Name")
-        .value
-        .trim();
-
-
         if(!code){
 
             document.getElementById("status")
             .textContent =
             "⚠️ Room code enter karo.";
-
-            return;
-
-        }
-
-
-        if(!currentUser && !name){
-
-            document.getElementById("status")
-            .textContent =
-            "⚠️ Player 2 ka naam enter karo (ya Google se sign in karo).";
 
             return;
 
@@ -2509,6 +2556,11 @@ document
 
         }
 
+
+        const name =
+        (myProfile && myProfile.displayName) ||
+        (currentUser && currentUser.displayName) ||
+        "Player";
 
         await performJoin(code, name);
 
@@ -2691,6 +2743,20 @@ function renderGame(){
 
         showWinner();
         updateGameStats();
+
+    }
+
+    else if(gameMode === "offline"){
+
+        const name =
+        game.turn === "p1"
+        ? p1.name
+        : p2.name;
+
+        document
+        .getElementById("turnDisplay")
+        .textContent =
+        "🔵 "+(name || "Player")+"'S TURN";
 
     }
 
@@ -2973,7 +3039,7 @@ function createLine(
 
 /* ================= MAKE MOVE ================= */
 
-async function makeMove(key){
+async function makeOnlineMove(key){
 
     if(!game) return;
 
@@ -3333,7 +3399,7 @@ function sendChatMessage(){
     if(!text) return;
     if(text.length > 200) text = text.substring(0, 200);
 
-    if(!roomCode || !db) return;
+    if(gameMode !== "online" || !roomCode || !db) return;
 
     const sender = getChatSender();
 
@@ -3362,7 +3428,7 @@ function sendChatMessage(){
 
 function sendSystemMessage(text){
 
-    if(!roomCode || !db) return;
+    if(gameMode !== "online" || !roomCode || !db) return;
 
     db.ref("rooms/" + roomCode + "/chat")
         .push()
@@ -3685,7 +3751,7 @@ function renderStickerGrid(){
 
 function sendSticker(sticker){
     if(!isStickerAllowed(sticker)) return;
-    if(!roomCode || !db) return;
+    if(gameMode !== "online" || !roomCode || !db) return;
 
     const sender = getChatSender();
 
@@ -3822,7 +3888,7 @@ function searchGifs(query){
 
 function sendGif(url, title){
     if(!isTrustedGifUrl(url)) return;
-    if(!roomCode || !db) return;
+    if(gameMode !== "online" || !roomCode || !db) return;
 
     const sender = getChatSender();
 
@@ -4749,6 +4815,1159 @@ function(){
     }
 
 });
+
+/* ================= GAME MODE ================= */
+
+function setMode(mode){
+
+    gameMode = mode;
+
+    document.getElementById("modeScreen").style.display = "none";
+    document.getElementById("computerSetup").style.display = "none";
+    document.getElementById("offlineSetup").style.display = "none";
+    document.getElementById("onlineSetup").style.display = "none";
+
+    if(mode === "computer"){
+
+        document.getElementById("computerSetup").style.display = "block";
+
+        if(myProfile && myProfile.displayName){
+
+            document.getElementById("computerName").value = myProfile.displayName;
+
+        }
+
+    }
+
+    else if(mode === "offline"){
+
+        document.getElementById("offlineSetup").style.display = "block";
+
+    }
+
+    else if(mode === "online"){
+
+        document.getElementById("onlineSetup").style.display = "block";
+
+    }
+
+}
+
+
+function goHome(){
+
+    cleanupChatListener();
+
+    if(computerTimer){
+
+        clearTimeout(computerTimer);
+
+        computerTimer = null;
+
+        computerThinking = false;
+
+    }
+
+    gameMode = "";
+
+    game = null;
+
+    roomCode = "";
+
+    myPlayer = "";
+
+    resultRecorded = false;
+
+    computerThinking = false;
+
+    document.getElementById("setupScreen").style.display = "block";
+
+    document.getElementById("modeScreen").style.display = "block";
+
+    document.getElementById("computerSetup").style.display = "none";
+
+    document.getElementById("offlineSetup").style.display = "none";
+
+    document.getElementById("onlineSetup").style.display = "none";
+
+    document.getElementById("gameScreen").style.display = "none";
+
+    document.getElementById("result").textContent = "";
+
+    document.getElementById("turnDisplay").textContent = "Waiting...";
+
+}
+
+
+function goBack(){
+
+    if(gameMode === "computer"){
+
+        setMode("");
+
+        document.getElementById("modeScreen").style.display = "block";
+
+    }
+
+    else if(gameMode === "offline"){
+
+        setMode("");
+
+        document.getElementById("modeScreen").style.display = "block";
+
+    }
+
+    else if(gameMode === "online"){
+
+        setMode("");
+
+        document.getElementById("modeScreen").style.display = "block";
+
+    }
+
+    else{
+
+        goHome();
+
+    }
+
+}
+
+
+/* ================= DIFFICULTY ================= */
+
+document.querySelectorAll(".diff-btn").forEach(btn => {
+
+    btn.addEventListener("click", function(){
+
+        document.querySelectorAll(".diff-btn").forEach(b => b.classList.remove("selected"));
+
+        this.classList.add("selected");
+
+        selectedDifficulty = this.dataset.diff;
+
+    });
+
+});
+
+
+/* ================= MODE BUTTONS ================= */
+
+document.getElementById("modeComputer").addEventListener("click", () => setMode("computer"));
+
+document.getElementById("modeOffline").addEventListener("click", () => setMode("offline"));
+
+document.getElementById("modeOnline").addEventListener("click", () => setMode("online"));
+
+document.getElementById("backFromComputer").addEventListener("click", goBack);
+
+document.getElementById("backFromOffline").addEventListener("click", goBack);
+
+document.getElementById("backFromOnline").addEventListener("click", goBack);
+
+
+/* ================= START COMPUTER ================= */
+
+document.getElementById("startComputer").addEventListener("click", () => {
+
+    const name =
+    document.getElementById("computerName").value.trim() ||
+    (myProfile && myProfile.displayName) ||
+    (currentUser && currentUser.displayName) ||
+    "Player";
+
+    gameMode = "computer";
+
+    roomCode = "computer_" + Date.now();
+
+    myPlayer = "p1";
+
+    game = {
+
+        size:selectedSize,
+
+        gameId:roomCode,
+
+        players:{
+            p1:{
+                uid: currentUser ? currentUser.uid : "local",
+                name: name,
+                username: myProfile ? myProfile.username : "",
+                photoURL: myProfile ? myProfile.photoURL : ""
+            },
+            p2:{
+                uid: "computer",
+                name: "🤖 Computer",
+                username: "",
+                photoURL: ""
+            }
+        },
+
+        scores:{
+            p1:0,
+            p2:0
+        },
+
+        turn:"p1",
+
+        lines:{},
+
+        boxes:{},
+
+        finished:false,
+
+        vsComputer:true
+
+    };
+
+    openGame();
+
+    drawBoard();
+
+});
+
+
+/* ================= START OFFLINE ================= */
+
+document.getElementById("startOffline").addEventListener("click", () => {
+
+    const p1 =
+    document.getElementById("offlineP1Name").value.trim() || "Player 1";
+
+    const p2 =
+    document.getElementById("offlineP2Name").value.trim() || "Player 2";
+
+    gameMode = "offline";
+
+    roomCode = "offline_" + Date.now();
+
+    myPlayer = "p1";
+
+    game = {
+
+        size:selectedSize,
+
+        gameId:roomCode,
+
+        players:{
+            p1:{
+                uid: "offline_p1",
+                name: p1,
+                username: "",
+                photoURL: ""
+            },
+            p2:{
+                uid: "offline_p2",
+                name: p2,
+                username: "",
+                photoURL: ""
+            }
+        },
+
+        scores:{
+            p1:0,
+            p2:0
+        },
+
+        turn:"p1",
+
+        lines:{},
+
+        boxes:{},
+
+        finished:false,
+
+        vsComputer:false
+
+    };
+
+    openGame();
+
+    drawBoard();
+
+});
+
+
+/* ================= COMPUTER AI ================= */
+
+function getAvailableMoves(){
+
+    if(!game || !game.lines) return [];
+
+    const n = Number(game.size);
+
+    const moves = [];
+
+    for(let i = 0; i < n - 1; i++){
+
+        for(let j = 0; j < n - 1; j++){
+
+            // horizontal
+
+            const hKey = "h_" + i + "_" + j;
+
+            if(!game.lines[hKey]){
+
+                moves.push({ key: hKey, type: "h", i: i, j: j });
+
+            }
+
+            // vertical
+
+            const vKey = "v_" + i + "_" + j;
+
+            if(!game.lines[vKey]){
+
+                moves.push({ key: vKey, type: "v", i: i, j: j });
+
+            }
+
+        }
+
+    }
+
+    return moves;
+
+}
+
+
+function isBoxComplete(boxKey){
+
+    if(!game || !game.lines) return false;
+
+    const parts = boxKey.split("_");
+
+    const r = Number(parts[0]);
+
+    const c = Number(parts[1]);
+
+    const top = "h_"+r+"_"+c;
+
+    const bottom = "h_"+(r+1)+"_"+c;
+
+    const left = "v_"+r+"_"+c;
+
+    const right = "v_"+r+"_"+(c+1);
+
+    return !!(game.lines[top] && game.lines[bottom] && game.lines[left] && game.lines[right]);
+
+}
+
+
+function countCompletedBoxesForMove(move){
+
+    if(!game) return 0;
+
+    const n = Number(game.size);
+
+    let count = 0;
+
+    if(move.type === "h"){
+
+        const box1 = move.i + "_" + move.j;
+
+        if(isBoxComplete(box1)){
+
+            count++;
+
+        }
+
+        if(move.i > 0){
+
+            const box2 = (move.i - 1) + "_" + move.j;
+
+            if(isBoxComplete(box2)){
+
+                count++;
+
+            }
+
+        }
+
+    }
+
+    else{
+
+        const box1 = move.i + "_" + move.j;
+
+        if(isBoxComplete(box1)){
+
+            count++;
+
+        }
+
+        if(move.j > 0){
+
+            const box2 = move.i + "_" + (move.j - 1);
+
+            if(isBoxComplete(box2)){
+
+                count++;
+
+            }
+
+        }
+
+    }
+
+    return count;
+
+}
+
+
+function wouldGiveBoxToOpponent(move){
+
+    if(!game) return false;
+
+    const n = Number(game.size);
+
+    let boxes = [];
+
+    if(move.type === "h"){
+
+        const box1 = move.i + "_" + move.j;
+
+        boxes.push(box1);
+
+        if(move.i > 0){
+
+            boxes.push((move.i - 1) + "_" + move.j);
+
+        }
+
+    }
+
+    else{
+
+        const box1 = move.i + "_" + move.j;
+
+        boxes.push(box1);
+
+        if(move.j > 0){
+
+            boxes.push(move.i + "_" + (move.j - 1));
+
+        }
+
+    }
+
+    for(const b of boxes){
+
+        if(isBoxComplete(b)) continue;
+
+        const parts = b.split("_");
+
+        const r = Number(parts[0]);
+
+        const c = Number(parts[1]);
+
+        const needed = ["top", "right", "bottom", "left"];
+
+        let missing = 0;
+
+        for(const s of needed){
+
+            let key;
+
+            if(s === "top") key = "h_"+r+"_"+c;
+
+            else if(s === "bottom") key = "h_"+(r+1)+"_"+c;
+
+            else if(s === "left") key = "v_"+r+"_"+c;
+
+            else key = "v_"+r+"_"+(c+1);
+
+            if(!game.lines[key]) missing++;
+
+        }
+
+        if(missing === 1){
+
+            return true;
+
+        }
+
+    }
+
+    return false;
+
+}
+
+
+function evaluateMove(move){
+
+    const boxesCompleted = countCompletedBoxesForMove(move);
+
+    const givesToOpponent = wouldGiveBoxToOpponent(move);
+
+    return boxesCompleted * 10 - (givesToOpponent ? 5 : 0);
+
+}
+
+
+function getComputerMove(){
+
+    if(!game || game.finished) return null;
+
+    const moves = getAvailableMoves();
+
+    if(moves.length === 0) return null;
+
+    if(selectedDifficulty === "easy"){
+
+        if(Math.random() < 0.3){
+
+            const good = moves.filter(m => countCompletedBoxesForMove(m) > 0);
+
+            if(good.length > 0){
+
+                return good[Math.floor(Math.random() * good.length)];
+
+            }
+
+        }
+
+        return moves[Math.floor(Math.random() * moves.length)];
+
+    }
+
+    else if(selectedDifficulty === "medium"){
+
+        const safe = moves.filter(m => !wouldGiveBoxToOpponent(m));
+
+        const pick = safe.length > 0 ? safe : moves;
+
+        pick.sort((a, b) => evaluateMove(b) - evaluateMove(a));
+
+        return pick[0];
+
+    }
+
+    else{
+
+        moves.sort((a, b) => evaluateMove(b) - evaluateMove(a));
+
+        return moves[0];
+
+    }
+
+}
+
+
+function applyComputerMove(){
+
+    if(!game || game.finished || computerThinking) return;
+
+    computerThinking = true;
+
+    document.getElementById("turnDisplay").textContent = "🤖 Computer is thinking...";
+
+    const delay = 500 + Math.random() * 500;
+
+    computerTimer = setTimeout(() => {
+
+        computerTimer = null;
+
+        const move = getComputerMove();
+
+        if(move){
+
+            makeLocalMove(move.key, "p2");
+
+        }
+
+        computerThinking = false;
+
+        if(game){
+
+            renderGame();
+
+            if(game.finished){
+
+                handleGameEnd();
+
+            }
+
+        }
+
+    }, delay);
+
+}
+
+
+/* ================= MAKE MOVE ================= */
+
+function makeLocalMove(key, player){
+
+    if(!game || game.finished) return false;
+
+    if(game.lines[key]) return false;
+
+    game.lines[key] = player;
+
+    const n = Number(game.size);
+
+    let boxesCompleted = 0;
+
+    for(let r=0;r<n-1;r++){
+
+        for(let c=0;c<n-1;c++){
+
+            const boxKey = r+"_"+c;
+
+            if(game.boxes[boxKey]){
+
+                continue;
+
+            }
+
+            const top = "h_"+r+"_"+c;
+
+            const bottom = "h_"+(r+1)+"_"+c;
+
+            const left = "v_"+r+"_"+c;
+
+            const right = "v_"+r+"_"+(c+1);
+
+            if(game.lines[top] && game.lines[bottom] && game.lines[left] && game.lines[right]){
+
+                game.boxes[boxKey] = player;
+
+                game.scores[player] = (game.scores[player] || 0) + 1;
+
+                boxesCompleted++;
+
+            }
+
+        }
+
+    }
+
+    const allDone =
+    Object.keys(game.lines).length ===
+    2 * n * (n - 1);
+
+    if(allDone){
+
+        game.finished = true;
+
+    }
+
+    else if(boxesCompleted === 0){
+
+        game.turn = game.turn === "p1" ? "p2" : "p1";
+
+    }
+
+    if(gameMode === "computer" && game.turn === "p2" && !game.finished){
+
+        applyComputerMove();
+
+    }
+
+    return true;
+
+}
+
+
+
+
+
+/* ================= GAME END ================= */
+
+function handleGameEnd(){
+
+    if(gameMode === "computer"){
+
+        const p1Score = game.scores.p1;
+
+        const p2Score = game.scores.p2;
+
+        let text = "";
+
+        if(p1Score > p2Score){
+
+            text = "🏆 YOU WIN!";
+
+        }
+
+        else if(p2Score > p1Score){
+
+            text = "🤖 COMPUTER WINS!";
+
+        }
+
+        else{
+
+            text = "🤝 DRAW!";
+
+        }
+
+        document.getElementById("result").innerHTML = text + "<br>" +
+
+        '<button class="btn create-btn" onclick="restartGame()" style="margin-top:10px;">PLAY AGAIN</button>' +
+
+        '<button class="btn join-btn" onclick="goBack()" style="margin-top:10px;">CHANGE MODE</button>' +
+
+        '<button class="back-btn" onclick="goHome()" style="margin-top:10px;">HOME</button>';
+
+    }
+
+    else if(gameMode === "offline"){
+
+        const p1Name = getPlayerInfo("p1").name || "Player 1";
+
+        const p2Name = getPlayerInfo("p2").name || "Player 2";
+
+        const p1Score = game.scores.p1;
+
+        const p2Score = game.scores.p2;
+
+        let text = "";
+
+        if(p1Score > p2Score){
+
+            text = "🏆 " + p1Name + " Wins!";
+
+        }
+
+        else if(p2Score > p1Score){
+
+            text = "🏆 " + p2Name + " Wins!";
+
+        }
+
+        else{
+
+            text = "🤝 DRAW!";
+
+        }
+
+        document.getElementById("result").innerHTML = text + "<br>" +
+
+        '<button class="btn create-btn" onclick="restartGame()" style="margin-top:10px;">PLAY AGAIN</button>' +
+
+        '<button class="btn join-btn" onclick="goBack()" style="margin-top:10px;">CHANGE MODE</button>' +
+
+        '<button class="back-btn" onclick="goHome()" style="margin-top:10px;">HOME</button>';
+
+    }
+
+    else{
+
+        const p1Name = getPlayerInfo("p1").name || "Player 1";
+
+        const p2Name = getPlayerInfo("p2").name || "Player 2";
+
+        const p1Score = game.scores.p1;
+
+        const p2Score = game.scores.p2;
+
+        let text = "";
+
+        if(p1Score > p2Score){
+
+            text = "🏆 " + p1Name + " Wins!";
+
+        }
+
+        else if(p2Score > p1Score){
+
+            text = "🏆 " + p2Name + " Wins!";
+
+        }
+
+        else{
+
+            text = "🤝 DRAW!";
+
+        }
+
+        document.getElementById("result").innerHTML = text + "<br>" +
+
+        '<button class="btn create-btn" onclick="restartGame()" style="margin-top:10px;">PLAY AGAIN</button>' +
+
+        '<button class="btn join-btn" onclick="goBack()" style="margin-top:10px;">CHANGE MODE</button>' +
+
+        '<button class="back-btn" onclick="goHome()" style="margin-top:10px;">HOME</button>';
+
+    }
+
+    document.getElementById("turnDisplay").textContent = "🏁 GAME FINISHED";
+
+    if(!chatFinishAnnounced && gameMode === "online"){
+
+        chatFinishAnnounced = true;
+
+        renderChatMessage({ system: true, text: "🏁 Game finished" });
+
+    }
+
+    if(gameMode === "online"){
+
+        updateGameStats();
+
+    }
+
+}
+
+
+function restartGame(){
+
+    if(!game) return;
+
+    if(computerTimer){
+
+        clearTimeout(computerTimer);
+
+        computerTimer = null;
+
+    }
+
+    computerThinking = false;
+
+    const size = game.size;
+
+    game = {
+
+        size:size,
+
+        gameId:roomCode,
+
+        players: game.players,
+
+        scores:{
+            p1:0,
+            p2:0
+        },
+
+        turn:"p1",
+
+        lines:{},
+
+        boxes:{},
+
+        finished:false,
+
+        vsComputer: gameMode === "computer"
+
+    };
+
+    resultRecorded = false;
+
+    document.getElementById("result").textContent = "";
+
+    document.getElementById("turnDisplay").textContent = "Waiting...";
+
+    renderGame();
+
+    drawBoard();
+
+}
+
+
+/* ================= MODE-SPECIFIC OPEN GAME ================= */
+
+function openGame(){
+
+    resultRecorded = false;
+
+    document.getElementById("setupScreen").style.display = "none";
+
+    document.getElementById("gameScreen").style.display = "block";
+
+    document.getElementById("roomDisplay").textContent =
+    gameMode === "online" ? roomCode : "";
+
+    document.getElementById("roomDisplay").parentElement.style.display =
+    gameMode === "online" ? "block" : "none";
+
+    if(gameMode === "online"){
+
+        setupChatListener();
+
+    }
+
+    else{
+
+        cleanupChatListener();
+
+    }
+
+    renderGame();
+
+}
+
+
+/* ================= SHOW WINNER (MODE AWARE) ================= */
+
+function showWinner(){
+
+    const resultEl = document.getElementById("result");
+
+    if(resultEl && resultEl.querySelector("button")){
+
+        return;
+
+    }
+
+    let text = "";
+
+    const p1Name = getPlayerInfo("p1").name;
+
+    const p2Name = getPlayerInfo("p2").name;
+
+    if(gameMode === "computer"){
+
+        if(game.scores.p1 > game.scores.p2){
+
+            text = "🏆 YOU WIN!";
+
+        }
+
+        else if(game.scores.p2 > game.scores.p1){
+
+            text = "🤖 COMPUTER WINS!";
+
+        }
+
+        else{
+
+            text = "🤝 DRAW!";
+
+        }
+
+    }
+
+    else if(gameMode === "offline"){
+
+        if(game.scores.p1 > game.scores.p2){
+
+            text = "🏆 " + (p1Name || "Player 1") + " Wins!";
+
+        }
+
+        else if(game.scores.p2 > game.scores.p1){
+
+            text = "🏆 " + (p2Name || "Player 2") + " Wins!";
+
+        }
+
+        else{
+
+            text = "🤝 DRAW!";
+
+        }
+
+    }
+
+    else{
+
+        if(game.scores.p1 > game.scores.p2){
+
+            text = "🏆 " + (p1Name || "Player 1") + " Wins!";
+
+        }
+
+        else if(game.scores.p2 > game.scores.p1){
+
+            text = "🏆 " + (p2Name || "Player 2") + " Wins!";
+
+        }
+
+        else{
+
+            text = "🤝 DRAW!";
+
+        }
+
+    }
+
+    resultEl.textContent = text;
+
+    document.getElementById("turnDisplay").textContent = "🏁 GAME FINISHED";
+
+    if(!chatFinishAnnounced && gameMode === "online"){
+
+        chatFinishAnnounced = true;
+
+        renderChatMessage({ system: true, text: "🏁 Game finished" });
+
+    }
+
+    if(gameMode === "online"){
+
+        updateGameStats();
+
+    }
+
+}
+
+
+/* ================= UPDATE GAME STATS ================= */
+
+function updateGameStats(){
+
+    if(!currentUser || !game || !game.finished) return;
+
+    if(!game.gameId) return;
+
+    if(resultRecorded) return;
+
+    if(gameMode !== "online") return;
+
+    const mySlot = myPlayer;
+
+    if(!mySlot) return;
+
+    const myScore = Number(game.scores[mySlot]) || 0;
+
+    const oppSlot = mySlot === "p1" ? "p2" : "p1";
+
+    const oppScore = Number(game.scores[oppSlot]) || 0;
+
+    let result;
+
+    if(myScore > oppScore) result = "win";
+
+    else if(myScore < oppScore) result = "loss";
+
+    else result = "draw";
+
+    const gameId = game.gameId;
+
+    const uid = currentUser.uid;
+
+    const boxes = myScore;
+
+    resultRecorded = true;
+
+    const markerRef = db.ref("gameResults/" + gameId + "/" + uid);
+
+    markerRef.transaction(function(current){
+
+        if(current) return current;
+
+        return { recorded: true, result: result, boxes: boxes };
+
+    }).then(function(res){
+
+        if(res.committed){
+
+            return updateStats(uid, result, boxes);
+
+        }
+
+    }).catch(function(error){
+
+        console.error(error);
+
+        resultRecorded = false;
+
+    });
+
+}
+
+
+/* ================= BOARD INTERACTION ================= */
+
+document.getElementById("gameBoard").addEventListener("click", function(e){
+
+    if(!game || game.finished) return;
+
+    if(gameMode === "computer" && (game.turn === "p2" || computerThinking)){
+
+        return;
+
+    }
+
+    const lineEl = e.target.closest(".line");
+
+    if(!lineEl) return;
+
+    const key = lineEl.dataset.key;
+
+    if(!key || game.lines[key]) return;
+
+    const success = makeMove(key, game.turn);
+
+    if(success){
+
+        renderGame();
+
+        if(game.finished){
+
+            handleGameEnd();
+
+        }
+
+    }
+
+});
+
+
+/* ================= BACK HOME ================= */
+
+document.getElementById("backHome").addEventListener("click",function(){
+
+    cleanupChatListener();
+
+    if(computerTimer){
+
+        clearTimeout(computerTimer);
+
+        computerTimer = null;
+
+        computerThinking = false;
+
+    }
+
+    goHome();
+
+});
+
+
+/* ================= MOVE DISPATCHER ================= */
+
+async function makeMove(key, player){
+
+    if(gameMode === "online" || !gameMode){
+
+        return makeOnlineMove(key);
+
+    }
+
+    return makeLocalMove(key, player || game.turn);
+
+}
+
+
+/* ================= INITIALIZE MODE SCREEN ================= */
+
+function initializeModeScreen(){
+
+    document.getElementById("modeScreen").style.display = "block";
+
+    document.getElementById("computerSetup").style.display = "none";
+
+    document.getElementById("offlineSetup").style.display = "none";
+
+    document.getElementById("onlineSetup").style.display = "none";
+
+}
+
+
+if(document.readyState === "loading"){
+
+    document.addEventListener("DOMContentLoaded", initializeModeScreen);
+
+}
+
+else{
+
+    initializeModeScreen();
+
+}
 
 </script>
 
