@@ -719,6 +719,133 @@ input:focus{
     background:#3a2030;
 }
 
+/* ================= AVATAR PICKER ================= */
+
+.avatar-picker-modal{
+    max-width:520px;
+}
+
+.avatar-picker-title{
+    text-align:center;
+    color:#20d9ff;
+    margin-bottom:14px;
+}
+
+.avatar-preview{
+    text-align:center;
+    margin-bottom:14px;
+}
+
+.avatar-preview-img{
+    width:100px;
+    height:100px;
+    border-radius:50%;
+    object-fit:cover;
+    border:2px solid #20d9ff;
+    box-shadow:0 0 20px rgba(32,217,255,.25);
+}
+
+.avatar-preview-fallback{
+    width:100px;
+    height:100px;
+    border-radius:50%;
+    background:linear-gradient(135deg,#123b50,#20254b);
+    color:#fff;
+    font-size:36px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border:2px solid #20d9ff;
+}
+
+.avatar-preview-name{
+    color:#aab5d1;
+    font-size:13px;
+    margin-top:6px;
+}
+
+.avatar-tabs{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:8px;
+    margin-bottom:12px;
+}
+
+.avatar-tab{
+    padding:10px;
+    border:0;
+    border-radius:12px;
+    color:#fff;
+    background:#273452;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.avatar-tab.active{
+    background:linear-gradient(90deg,#078cff,#d52cb5);
+    box-shadow:0 0 18px rgba(32,217,255,.2);
+}
+
+.avatar-options{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:10px;
+    max-height:320px;
+    overflow-y:auto;
+    padding:4px;
+}
+
+.avatar-card{
+    background:rgba(10,17,39,.92);
+    border:2px solid #2b385b;
+    border-radius:16px;
+    padding:8px;
+    cursor:pointer;
+    text-align:center;
+    transition:.2s;
+}
+
+.avatar-card:hover{
+    border-color:#20d9ff;
+    transform:translateY(-2px);
+}
+
+.avatar-card.selected{
+    border-color:#20d9ff;
+    box-shadow:0 0 18px rgba(32,217,255,.35);
+}
+
+.avatar-card img{
+    width:100%;
+    aspect-ratio:1/1;
+    border-radius:50%;
+    object-fit:cover;
+    display:block;
+    margin:0 auto 6px;
+    background:#070d20;
+}
+
+.avatar-card .avatar-check{
+    display:none;
+    color:#20d9ff;
+    font-weight:bold;
+}
+
+.avatar-card.selected .avatar-check{
+    display:block;
+}
+
+.avatar-card .avatar-name{
+    color:#aab5d1;
+    font-size:11px;
+}
+
+@media(max-width:600px){
+    .avatar-options{
+        grid-template-columns:repeat(3,1fr);
+    }
+}
+
 /* ================= CHAT ================= */
 
 .chat-panel{
@@ -799,6 +926,31 @@ input:focus{
 
 .chat-time{
     opacity:.7;
+}
+
+.chat-avatar{
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    overflow:hidden;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    margin-right:6px;
+    background:#070d20;
+    flex-shrink:0;
+}
+
+.chat-avatar img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+}
+
+.chat-avatar .avatar-fallback{
+    font-size:11px;
+    color:#fff;
 }
 
 .chat-text{
@@ -923,8 +1075,7 @@ input:focus{
     gap:6px;
 }
 
-.sticker-section-label,
-.gif-section-label{
+.sticker-section-label{
     grid-column:1 / -1;
     font-size:11px;
     color:#aab5d1;
@@ -945,59 +1096,6 @@ input:focus{
     transform:scale(1.1);
 }
 
-.gif-search-row{
-    margin-bottom:8px;
-}
-
-.gif-search-row input{
-    width:100%;
-    padding:10px 12px;
-    border-radius:10px;
-    border:1px solid #354263;
-    background:#070d20;
-    color:#fff;
-    outline:none;
-    font-size:14px;
-}
-
-.gif-search-row input:focus{
-    border-color:#20d9ff;
-}
-
-.gif-loading{
-    color:#aab5d1;
-    font-size:13px;
-    text-align:center;
-    padding:6px 0;
-}
-
-.gif-error{
-    color:#ff63b5;
-    font-size:13px;
-    text-align:center;
-    padding:6px 0;
-}
-
-.gif-grid{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:8px;
-}
-
-.gif-thumb{
-    width:100%;
-    border-radius:10px;
-    cursor:pointer;
-    display:block;
-    border:1px solid #2b385b;
-    transition:.15s;
-}
-
-.gif-thumb:hover{
-    border-color:#20d9ff;
-    box-shadow:0 0 12px rgba(32,217,255,.4);
-}
-
 .chat-sticker{
     font-size:42px;
     line-height:1.1;
@@ -1010,17 +1108,7 @@ input:focus{
     100%{ transform:scale(1); }
 }
 
-.chat-gif{
-    max-width:220px;
-    max-height:220px;
-    border-radius:12px;
-    display:block;
-}
-
 @media(max-width:800px){
-    .chat-gif{
-        max-width:180px;
-    }
     .sticker-grid{
         grid-template-columns:repeat(5,1fr);
     }
@@ -1563,18 +1651,8 @@ Player 2
         <div class="sticker-grid" id="stickerGrid"></div>
     </div>
 
-    <div class="chat-popover" id="gifPicker" style="display:none;">
-        <div class="gif-search-row">
-            <input id="gifSearch" type="text" placeholder="🔎 Search GIFs...">
-        </div>
-        <div class="gif-loading" id="gifLoading" style="display:none;">Loading...</div>
-        <div class="gif-grid" id="gifGrid"></div>
-        <div class="gif-error" id="gifError" style="display:none;"></div>
-    </div>
-
     <div class="chat-toolbar">
         <button type="button" class="chat-tool" id="stickerBtn" title="Stickers">😊</button>
-        <button type="button" class="chat-tool" id="gifBtn" title="GIF">GIF</button>
     </div>
 
     <div class="chat-input-row">
@@ -1632,8 +1710,35 @@ Player 2
 
         <div class="modal-actions">
             <button type="button" class="btn edit-btn" id="editProfileBtn">✏️ Edit Profile</button>
+            <button type="button" class="btn create-btn" id="changeAvatarBtn">🖼️ CHANGE AVATAR</button>
             <button type="button" class="btn signout-btn" id="signOutBtn">🚪 Sign Out</button>
             <button type="button" class="btn close-btn" id="closeModalBtn">✕ Close</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ================= AVATAR PICKER MODAL ================= -->
+<div class="modal-overlay" id="avatarPickerModal">
+    <div class="modal avatar-picker-modal">
+        <h2 class="avatar-picker-title">CHOOSE YOUR AVATAR</h2>
+
+        <div class="avatar-preview">
+            <img id="avatarPreviewImage" class="avatar-preview-img" alt="avatar preview">
+            <div class="avatar-preview-fallback" id="avatarPreviewFallback" style="display:none;">?</div>
+            <div class="avatar-preview-name" id="avatarPreviewName"></div>
+        </div>
+
+        <div class="avatar-tabs">
+            <button type="button" class="avatar-tab active" data-category="boys" id="avatarTabBoys">👦 BOYS</button>
+            <button type="button" class="avatar-tab" data-category="girls" id="avatarTabGirls">👧 GIRLS</button>
+        </div>
+
+        <div class="avatar-options" id="avatarOptions"></div>
+
+        <div class="modal-actions">
+            <button type="button" class="btn create-btn" id="saveAvatarBtn">💾 SAVE AVATAR</button>
+            <button type="button" class="btn close-btn" id="closeAvatarBtn">✕ Close</button>
         </div>
     </div>
 </div>
@@ -1732,6 +1837,44 @@ let computerThinking = false;
 let computerTimer = null;
 
 let selectedDifficulty = "medium";
+
+let selectedAvatarCategory = "boys";
+
+let selectedAvatarId = null;
+
+
+/* ================= AVATARS ================= */
+
+const AVATARS = {
+    boys: [
+        { id: "boy_01", name: "Classic Boy", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=boy1&backgroundColor=b6e3f4" },
+        { id: "boy_02", name: "Cool Boy", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=boy2&backgroundColor=c0aede" },
+        { id: "boy_03", name: "Sporty Boy", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=boy3&backgroundColor=ffdfbf" },
+        { id: "boy_04", name: "Gamer Boy", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=boy4&backgroundColor=d1f4e0" },
+        { id: "boy_05", name: "Hipster Boy", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=boy5&backgroundColor=ffd5dc" },
+        { id: "boy_06", name: "Young Explorer", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=boy6&backgroundColor=e5e5e5" },
+        { id: "boy_07", name: "Street Style", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=boy7&backgroundColor=ffe8b6" },
+        { id: "boy_08", name: "Casual Boy", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=boy8&backgroundColor=ffdfbf" },
+        { id: "boy_09", name: "Urban Boy", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=boy9&backgroundColor=c0aede" },
+        { id: "boy_10", name: "Neon Boy", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=boy10&backgroundColor=b6e3f4" },
+        { id: "boy_11", name: "Retro Boy", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=boy11&backgroundColor=d1f4e0" },
+        { id: "boy_12", name: "Summer Boy", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=boy12&backgroundColor=ffd5dc" }
+    ],
+    girls: [
+        { id: "girl_01", name: "Classic Girl", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=girl1&backgroundColor=ffdfbf" },
+        { id: "girl_02", name: "Cool Girl", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=girl2&backgroundColor=b6e3f4" },
+        { id: "girl_03", name: "Sporty Girl", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=girl3&backgroundColor=c0aede" },
+        { id: "girl_04", name: "Gamer Girl", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=girl4&backgroundColor=d1f4e0" },
+        { id: "girl_05", name: "Hipster Girl", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=girl5&backgroundColor=ffe8b6" },
+        { id: "girl_06", name: "Young Explorer", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=girl6&backgroundColor=e5e5e5" },
+        { id: "girl_07", name: "Street Style", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=girl7&backgroundColor=ffd5dc" },
+        { id: "girl_08", name: "Casual Girl", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=girl8&backgroundColor=ffdfbf" },
+        { id: "girl_09", name: "Urban Girl", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=girl9&backgroundColor=b6e3f4" },
+        { id: "girl_10", name: "Neon Girl", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=girl10&backgroundColor=c0aede" },
+        { id: "girl_11", name: "Retro Girl", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=girl11&backgroundColor=d1f4e0" },
+        { id: "girl_12", name: "Summer Girl", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=girl12&backgroundColor=ffe8b6" }
+    ]
+};
 
 
 /* ================= SIZE BUTTONS ================= */
@@ -1958,6 +2101,8 @@ async function createOrLoadProfile(user){
                 email: user.email || existing.email || "",
                 lastLogin: Date.now()
             };
+            if(!existing.avatarType) updates.avatarType = "google";
+            if(!existing.avatarId) updates.avatarId = "";
             await ref.update(updates);
             myProfile = Object.assign({}, existing, updates);
         }
@@ -1983,6 +2128,8 @@ function syncPublicProfile(oldUsername){
         username: myProfile.username || "",
         displayName: myProfile.displayName || "",
         photoURL: myProfile.photoURL || "",
+        avatarType: myProfile.avatarType || "google",
+        avatarId: myProfile.avatarId || "",
         stats: myProfile.stats || {}
     };
 
@@ -2012,6 +2159,8 @@ function buildNewProfile(user){
         bio: "",
         createdAt: Date.now(),
         lastLogin: Date.now(),
+        avatarType: "google",
+        avatarId: "",
         stats: {
             totalGames: 0,
             wins: 0,
@@ -2220,13 +2369,15 @@ async function updateStats(uid, result, boxes){
 
 function getPlayerInfo(slot){
     const p = game && game.players ? game.players[slot] : null;
-    if(!p) return { name: "", username: "", photoURL: "", uid: "" };
-    if(typeof p === "string") return { name: p, username: "", photoURL: "", uid: "" };
+    if(!p) return { name: "", username: "", photoURL: "", uid: "", avatarType: "", avatarId: "" };
+    if(typeof p === "string") return { name: p, username: "", photoURL: "", uid: "", avatarType: "", avatarId: "" };
     return {
         name: p.name || "",
         username: p.username || "",
         photoURL: p.photoURL || "",
-        uid: p.uid || ""
+        uid: p.uid || "",
+        avatarType: p.avatarType || "",
+        avatarId: p.avatarId || ""
     };
 }
 
@@ -2237,9 +2388,18 @@ function renderAvatar(wrapEl, info){
         wrapEl.removeChild(wrapEl.firstChild);
     }
 
-    if(info.photoURL){
+    let src = "";
+
+    if(info.avatarType === "cartoon" && info.avatarId){
+        const found = getAvatarById(info.avatarId);
+        if(found) src = found.url;
+    }
+
+    if(!src && info.photoURL) src = info.photoURL;
+
+    if(src){
         const img = document.createElement("img");
-        img.src = info.photoURL;
+        img.src = src;
         img.className = "avatar";
         img.alt = "";
         wrapEl.appendChild(img);
@@ -2261,7 +2421,9 @@ function buildPlayerObject(nameFallback){
             uid: currentUser.uid,
             name: myProfile.displayName,
             username: myProfile.username,
-            photoURL: myProfile.photoURL
+            photoURL: myProfile.photoURL,
+            avatarType: myProfile.avatarType || "google",
+            avatarId: myProfile.avatarId || ""
         };
     }
 
@@ -2282,14 +2444,8 @@ function renderAuthState(){
         signedOut.style.display = "none";
         signedIn.style.display = "flex";
 
-        const avatar = document.getElementById("authAvatar");
-        if(myProfile.photoURL){
-            avatar.src = myProfile.photoURL;
-            avatar.style.display = "";
-        }
-        else{
-            avatar.style.display = "none";
-        }
+        const avatarEl = document.getElementById("authAvatar");
+        renderUserAvatar(avatarEl.parentElement, { photoURL: myProfile.photoURL, name: myProfile.displayName });
 
         document.getElementById("authName").textContent =
             myProfile.displayName || currentUser.displayName || "Player";
@@ -2320,7 +2476,18 @@ function showProfileModal(){
     const p = myProfile;
 
     const photo = document.getElementById("modalPhoto");
-    if(p.photoURL){
+    const avatar = getUserAvatar();
+    if(avatar.avatarType === "cartoon" && avatar.avatarId){
+        const found = getAvatarById(avatar.avatarId);
+        if(found){
+            photo.src = found.url;
+            photo.style.display = "";
+        }
+        else{
+            photo.style.display = "none";
+        }
+    }
+    else if(p.photoURL){
         photo.src = p.photoURL;
         photo.style.display = "";
     }
@@ -2368,20 +2535,134 @@ function closeProfileModal(){
 }
 
 
-function toggleEditMode(){
+/* ================= AVATAR SYSTEM ================= */
 
-    const fields = document.getElementById("editFields");
-    const editBtn = document.getElementById("editProfileBtn");
+function getUserAvatar(){
+    if(!myProfile) return { avatarType: "google", photoURL: "", avatarId: "" };
+    return {
+        avatarType: myProfile.avatarType || "google",
+        photoURL: myProfile.photoURL || "",
+        avatarId: myProfile.avatarId || ""
+    };
+}
 
-    if(fields.style.display === "none"){
-        fields.style.display = "block";
-        if(editBtn) editBtn.textContent = "💾 Save";
+
+function getAvatarById(id){
+    const all = [].concat(AVATARS.boys || [], AVATARS.girls || []);
+    return all.find(a => a.id === id) || null;
+}
+
+
+function renderUserAvatar(wrapEl, user){
+    if(!wrapEl) return;
+    while(wrapEl.firstChild) wrapEl.removeChild(wrapEl.firstChild);
+
+    const avatar = getUserAvatar();
+    let src = "";
+
+    if(avatar.avatarType === "cartoon" && avatar.avatarId){
+        const found = getAvatarById(avatar.avatarId);
+        if(found) src = found.url;
+    }
+
+    if(!src && user && user.photoURL) src = user.photoURL;
+    if(!src && myProfile && myProfile.photoURL) src = myProfile.photoURL;
+
+    if(src){
+        const img = document.createElement("img");
+        img.src = src;
+        img.className = "avatar";
+        img.alt = "";
+        wrapEl.appendChild(img);
     }
     else{
-        fields.style.display = "none";
-        if(editBtn) editBtn.textContent = "✏️ Edit Profile";
+        const span = document.createElement("span");
+        span.className = "avatar-fallback";
+        const name = (user && user.name) ? user.name : (myProfile && myProfile.displayName) ? myProfile.displayName : "?";
+        span.textContent = name.charAt(0).toUpperCase();
+        wrapEl.appendChild(span);
     }
+}
 
+
+function openAvatarPicker(){
+    if(!currentUser || !myProfile) return;
+
+    const avatar = getUserAvatar();
+    selectedAvatarId = avatar.avatarId || null;
+    selectedAvatarCategory = "boys";
+
+    document.getElementById("avatarPickerModal").classList.add("open");
+    renderAvatarPicker();
+    updateAvatarPreview();
+}
+
+
+function closeAvatarPicker(){
+    document.getElementById("avatarPickerModal").classList.remove("open");
+}
+
+
+function renderAvatarPicker(){
+    const container = document.getElementById("avatarOptions");
+    if(!container) return;
+    container.innerHTML = "";
+
+    const list = AVATARS[selectedAvatarCategory] || [];
+
+    list.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "avatar-card" + (selectedAvatarId === item.id ? " selected" : "");
+        card.innerHTML = `<img src="${item.url}" alt="${item.name}" loading="lazy"><div class="avatar-check">✓</div><div class="avatar-name">${item.name}</div>`;
+        card.addEventListener("click", function(){
+            selectedAvatarId = item.id;
+            document.querySelectorAll(".avatar-card").forEach(c => c.classList.remove("selected"));
+            card.classList.add("selected");
+            updateAvatarPreview();
+        });
+        container.appendChild(card);
+    });
+}
+
+
+function updateAvatarPreview(){
+    const img = document.getElementById("avatarPreviewImage");
+    const fallback = document.getElementById("avatarPreviewFallback");
+    const nameEl = document.getElementById("avatarPreviewName");
+    if(!img || !fallback || !nameEl) return;
+
+    const found = getAvatarById(selectedAvatarId);
+    if(found){
+        img.src = found.url;
+        img.style.display = "";
+        fallback.style.display = "none";
+    }
+    else{
+        img.style.display = "none";
+        fallback.style.display = "";
+    }
+    nameEl.textContent = found ? found.name : (myProfile && myProfile.displayName ? myProfile.displayName : "");
+}
+
+
+async function saveSelectedAvatar(){
+    if(!currentUser || !myProfile) return;
+
+    const updates = {
+        avatarType: selectedAvatarId ? "cartoon" : "google",
+        avatarId: selectedAvatarId || ""
+    };
+
+    try{
+        await db.ref("players/" + currentUser.uid).update(updates);
+        Object.assign(myProfile, updates);
+        closeAvatarPicker();
+        showProfileModal();
+        renderAuthState();
+    }
+    catch(error){
+        console.error(error);
+    }
 }
 
 
@@ -2416,6 +2697,38 @@ document.getElementById("profileModal")
         closeProfileModal();
     }
 });
+
+document.getElementById("avatarTabBoys")
+.addEventListener("click", function(){
+    selectedAvatarCategory = "boys";
+    document.querySelectorAll(".avatar-tab").forEach(t => t.classList.remove("active"));
+    this.classList.add("active");
+    renderAvatarPicker();
+});
+
+document.getElementById("avatarTabGirls")
+.addEventListener("click", function(){
+    selectedAvatarCategory = "girls";
+    document.querySelectorAll(".avatar-tab").forEach(t => t.classList.remove("active"));
+    this.classList.add("active");
+    renderAvatarPicker();
+});
+
+document.getElementById("saveAvatarBtn")
+.addEventListener("click", saveSelectedAvatar);
+
+document.getElementById("closeAvatarBtn")
+.addEventListener("click", closeAvatarPicker);
+
+document.getElementById("avatarPickerModal")
+.addEventListener("click", function(e){
+    if(e.target === this){
+        closeAvatarPicker();
+    }
+});
+
+document.getElementById("changeAvatarBtn")
+.addEventListener("click", openAvatarPicker);
 
 
 /* ================= CREATE ROOM ================= */
@@ -2695,12 +3008,12 @@ function renderGame(){
     const p1 = getPlayerInfo("p1");
     const p2 = getPlayerInfo("p2");
 
-    renderAvatar(
+    renderUserAvatar(
         document.getElementById("p1AvatarWrap"),
         p1
     );
 
-    renderAvatar(
+    renderUserAvatar(
         document.getElementById("p2AvatarWrap"),
         p2
     );
@@ -3316,7 +3629,9 @@ function getChatSender(){
             uid: currentUser.uid,
             username: myProfile.username || "",
             displayName: myProfile.displayName || currentUser.displayName || "Player",
-            photoURL: myProfile.photoURL || ""
+            photoURL: myProfile.photoURL || "",
+            avatarType: myProfile.avatarType || "google",
+            avatarId: myProfile.avatarId || ""
         };
     }
 
@@ -3329,7 +3644,9 @@ function getChatSender(){
         uid: myPlayer || "guest",
         username: name,
         displayName: name,
-        photoURL: ""
+        photoURL: "",
+        avatarType: "google",
+        avatarId: ""
     };
 
 }
@@ -3465,6 +3782,16 @@ function renderChatMessage(data){
     const meta = document.createElement("div");
     meta.className = "chat-meta";
 
+    const avatarWrap = document.createElement("span");
+    avatarWrap.className = "chat-avatar";
+    const avatarInfo = {
+        photoURL: data.photoURL || "",
+        avatarType: data.avatarType || "google",
+        avatarId: data.avatarId || "",
+        name: data.displayName || data.username || "Player"
+    };
+    renderUserAvatar(avatarWrap, avatarInfo);
+
     const name = document.createElement("span");
     name.className = "chat-name";
     name.textContent = mine ? "You" : (data.displayName || data.username || "Player");
@@ -3473,6 +3800,7 @@ function renderChatMessage(data){
     time.className = "chat-time";
     time.textContent = formatTime(data.timestamp);
 
+    meta.appendChild(avatarWrap);
     meta.appendChild(name);
     meta.appendChild(time);
 
@@ -3482,27 +3810,6 @@ function renderChatMessage(data){
         body = document.createElement("div");
         body.className = "chat-sticker";
         body.textContent = data.sticker;
-    }
-    else if(data.type === "gif" && data.gifUrl){
-        if(isTrustedGifUrl(data.gifUrl)){
-            const img = document.createElement("img");
-            img.className = "chat-gif";
-            img.alt = data.gifTitle || "GIF";
-            img.loading = "lazy";
-            img.src = data.gifUrl;
-            img.onerror = function(){
-                const fb = document.createElement("div");
-                fb.className = "chat-text";
-                fb.textContent = "🎞️ GIF unavailable";
-                if(img.parentNode) img.parentNode.replaceChild(fb, img);
-            };
-            body = img;
-        }
-        else {
-            body = document.createElement("div");
-            body.className = "chat-text";
-            body.textContent = "🎞️ GIF unavailable";
-        }
     }
     else {
         body = document.createElement("div");
@@ -3600,48 +3907,24 @@ function initializeChat(){
     send.addEventListener("click", sendChatMessage);
 
     const stickerBtn = document.getElementById("stickerBtn");
-    const gifBtn = document.getElementById("gifBtn");
 
     if(stickerBtn){
         stickerBtn.addEventListener("click", openStickerPicker);
     }
 
-    if(gifBtn){
-        gifBtn.addEventListener("click", openGifPicker);
-    }
-
-    const gifSearch = document.getElementById("gifSearch");
-    if(gifSearch){
-        gifSearch.addEventListener("keydown", function(e){
-            if(e.key === "Enter"){
-                e.preventDefault();
-                searchGifs(gifSearch.value.trim());
-            }
-        });
-        let gifTimer = null;
-        gifSearch.addEventListener("input", function(){
-            if(gifTimer) clearTimeout(gifTimer);
-            gifTimer = setTimeout(function(){
-                searchGifs(gifSearch.value.trim());
-            }, 450);
-        });
-    }
-
     document.addEventListener("keydown", function(e){
         if(e.key === "Escape"){
             closeStickerPicker();
-            closeGifPicker();
         }
     });
 
     document.addEventListener("click", function(e){
         const t = e.target;
         if(t && t.closest){
-            if(t.closest("#stickerPicker") || t.closest("#gifPicker")) return;
+            if(t.closest("#stickerPicker")) return;
         }
-        if(t && (t.id === "stickerBtn" || t.id === "gifBtn")) return;
+        if(t && t.id === "stickerBtn") return;
         closeStickerPicker();
-        closeGifPicker();
     });
 
     updateCounter();
@@ -3655,7 +3938,7 @@ initializeChat();
 initializeFriends();
 
 
-/* ================= STICKERS + GIFS ================= */
+/* ================= STICKERS ================= */
 
 const STICKERS = [
     "😂","😎","🤣","🔥","❤️","😭",
@@ -3664,45 +3947,13 @@ const STICKERS = [
     "⚡","👑","💯","🙈","🤔","😴"
 ];
 
-const GIF_CONFIG = {
-    provider: "giphy",
-    apiKey: "YOUR_GIPHY_API_KEY",
-    allowedHosts: [
-        "media.giphy.com",
-        "i.giphy.com",
-        "media0.giphy.com",
-        "media1.giphy.com",
-        "media2.giphy.com",
-        "media3.giphy.com",
-        "media4.giphy.com"
-    ]
-};
-
-const GIF_ENABLED = !!(GIF_CONFIG.apiKey && GIF_CONFIG.apiKey !== "YOUR_GIPHY_API_KEY");
-
-let gifController = null;
-
 
 function isStickerAllowed(s){
     return STICKERS.indexOf(s) !== -1;
 }
 
 
-function isTrustedGifUrl(url){
-    if(typeof url !== "string") return false;
-    if(url.indexOf("https://") !== 0) return false;
-    try{
-        const u = new URL(url);
-        return GIF_CONFIG.allowedHosts.indexOf(u.host) !== -1;
-    }
-    catch(e){
-        return false;
-    }
-}
-
-
 function openStickerPicker(){
-    closeGifPicker();
     renderStickerGrid();
     document.getElementById("stickerPicker").style.display = "block";
 }
@@ -3773,170 +4024,7 @@ function sendSticker(sticker){
 }
 
 
-function openGifPicker(){
-    closeStickerPicker();
-    const picker = document.getElementById("gifPicker");
-    if(picker) picker.style.display = "block";
-
-    const searchEl = document.getElementById("gifSearch");
-    if(searchEl) searchEl.value = "";
-    renderRecentGifs();
-    searchGifs("gaming");
-
-    if(searchEl) searchEl.focus();
-}
-
-
-function closeGifPicker(){
-    const p = document.getElementById("gifPicker");
-    if(p) p.style.display = "none";
-    if(gifController){
-        try{ gifController.abort(); }catch(e){}
-        gifController = null;
-    }
-}
-
-
-function renderRecentGifs(){
-    const grid = document.getElementById("gifGrid");
-    if(!grid) return;
-    grid.innerHTML = "";
-
-    const recent = loadRecentGifs();
-    if(recent.length){
-        const rl = document.createElement("div");
-        rl.className = "gif-section-label";
-        rl.textContent = "Recent";
-        grid.appendChild(rl);
-        recent.forEach(g => grid.appendChild(gifThumb(g.url, g.title || "")));
-    }
-
-    const results = document.createElement("div");
-    results.className = "gif-grid";
-    results.id = "gifResults";
-    grid.appendChild(results);
-}
-
-
-function gifThumb(url, title){
-    const img = document.createElement("img");
-    img.className = "gif-thumb";
-    img.loading = "lazy";
-    img.src = url;
-    img.alt = title || "GIF";
-    img.addEventListener("click", function(){
-        sendGif(url, title || "");
-    });
-    return img;
-}
-
-
-function searchGifs(query){
-    const results = document.getElementById("gifResults");
-    const loading = document.getElementById("gifLoading");
-    const errorEl = document.getElementById("gifError");
-
-    if(!GIF_ENABLED){
-        if(errorEl){
-            errorEl.textContent = "GIF service unavailable";
-            errorEl.style.display = "block";
-        }
-        if(results) results.innerHTML = "";
-        return;
-    }
-
-    if(!query) query = "gaming";
-    if(loading) loading.style.display = "block";
-    if(errorEl) errorEl.style.display = "none";
-    if(results) results.innerHTML = "";
-
-    const url = "https://api.giphy.com/v1/gifs/search?api_key=" +
-        encodeURIComponent(GIF_CONFIG.apiKey) +
-        "&q=" + encodeURIComponent(query) +
-        "&limit=12&rating=g";
-
-    if(gifController) gifController.abort();
-    gifController = new AbortController();
-
-    fetch(url, { signal: gifController.signal })
-        .then(function(r){ return r.json(); })
-        .then(function(res){
-            if(loading) loading.style.display = "none";
-            const items = (res && res.data) || [];
-            if(!items.length){
-                if(errorEl){
-                    errorEl.textContent = "No GIFs found.";
-                    errorEl.style.display = "block";
-                }
-                return;
-            }
-            items.forEach(function(item){
-                const u = (item.images && (item.images.fixed_width.url || item.images.downsized.url)) || "";
-                if(!u || !results) return;
-                results.appendChild(gifThumb(u, item.title || ""));
-            });
-        })
-        .catch(function(){
-            if(loading) loading.style.display = "none";
-            if(errorEl){
-                errorEl.textContent = "Unable to load GIFs. Please try again.";
-                errorEl.style.display = "block";
-            }
-        });
-}
-
-
-function sendGif(url, title){
-    if(!isTrustedGifUrl(url)) return;
-    if(gameMode !== "online" || !roomCode || !db) return;
-
-    const sender = getChatSender();
-
-    const data = {
-        type: "gif",
-        gifUrl: url,
-        gifTitle: title || "",
-        uid: sender.uid,
-        username: sender.username,
-        displayName: sender.displayName,
-        photoURL: sender.photoURL,
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-    };
-
-    db.ref("rooms/" + roomCode + "/chat").push().set(data)
-        .catch(function(error){ console.error(error); });
-
-    saveRecentGif(url, title || "");
-    closeGifPicker();
-}
-
-
 /* ================= RECENT (localStorage) ================= */
-
-function loadRecentGifs(){
-    try{
-        const raw = localStorage.getItem("dotsBattleRecentGifs");
-        const arr = raw ? JSON.parse(raw) : [];
-        return Array.isArray(arr) ? arr : [];
-    }
-    catch(e){
-        return [];
-    }
-}
-
-
-function saveRecentGif(url, title){
-    try{
-        const arr = loadRecentGifs().filter(function(g){
-            return g.url !== url;
-        });
-        arr.unshift({ url: url, title: title });
-        while(arr.length > 10) arr.pop();
-        localStorage.setItem("dotsBattleRecentGifs", JSON.stringify(arr));
-    }
-    catch(e){}
-}
-
 
 function loadRecentStickers(){
     try{
@@ -3947,6 +4035,19 @@ function loadRecentStickers(){
     catch(e){
         return [];
     }
+}
+
+
+function saveRecentSticker(s){
+    try{
+        const arr = loadRecentStickers().filter(function(x){
+            return x !== s;
+        });
+        arr.unshift(s);
+        while(arr.length > 10) arr.pop();
+        localStorage.setItem("dotsBattleRecentStickers", JSON.stringify(arr));
+    }
+    catch(e){}
 }
 
 
@@ -4258,9 +4359,15 @@ function friendRowEl(f){
     row.className = "friend-row";
     row.setAttribute("data-uid", f.uid);
 
-    const avatar = document.createElement(f.photoURL ? "img" : "div");
-    avatar.className = "f-avatar" + (f.online ? "" : " off");
-    if(f.photoURL){ avatar.src = f.photoURL; avatar.alt = ""; }
+    const avatarWrap = document.createElement("div");
+    avatarWrap.className = "f-avatar" + (f.online ? "" : " off");
+    const avatarInfo = {
+        photoURL: f.photoURL || "",
+        avatarType: f.avatarType || "google",
+        avatarId: f.avatarId || "",
+        name: f.name || "?"
+    };
+    renderUserAvatar(avatarWrap, avatarInfo);
 
     const main = document.createElement("div");
     main.className = "f-main";
@@ -4296,7 +4403,7 @@ function friendRowEl(f){
     actions.appendChild(view);
     actions.appendChild(inv);
 
-    row.appendChild(avatar);
+    row.appendChild(avatarWrap);
     row.appendChild(main);
     row.appendChild(actions);
     return row;
@@ -4344,9 +4451,15 @@ function searchPlayers(query){
 function searchResultEl(uid, p){
     const row = document.createElement("div");
     row.className = "friend-row";
-    const avatar = document.createElement(p.photoURL ? "img" : "div");
-    avatar.className = "f-avatar";
-    if(p.photoURL){ avatar.src = p.photoURL; avatar.alt = ""; }
+    const avatarWrap = document.createElement("div");
+    avatarWrap.className = "f-avatar";
+    const avatarInfo = {
+        photoURL: p.photoURL || "",
+        avatarType: p.avatarType || "google",
+        avatarId: p.avatarId || "",
+        name: p.displayName || "Player"
+    };
+    renderUserAvatar(avatarWrap, avatarInfo);
     const main = document.createElement("div");
     main.className = "f-main";
     const name = document.createElement("div");
@@ -4369,7 +4482,7 @@ function searchResultEl(uid, p){
     add.addEventListener("click", function(){ sendFriendRequest(uid, p); });
     actions.appendChild(view);
     actions.appendChild(add);
-    row.appendChild(avatar);
+    row.appendChild(avatarWrap);
     row.appendChild(main);
     row.appendChild(actions);
     return row;
@@ -4410,6 +4523,8 @@ async function sendFriendRequest(targetUid, targetInfo){
         fromUsername: myProfile ? myProfile.username : "",
         fromDisplayName: myProfile ? myProfile.displayName : "",
         fromPhotoURL: myProfile ? myProfile.photoURL : "",
+        fromAvatarType: myProfile ? (myProfile.avatarType || "google") : "google",
+        fromAvatarId: myProfile ? (myProfile.avatarId || "") : "",
         timestamp: firebase.database.ServerValue.TIMESTAMP,
         status: "pending"
     };
@@ -4429,6 +4544,8 @@ async function acceptFriendRequest(senderUid, req){
         username: req.fromUsername || "",
         displayName: req.fromDisplayName || "",
         photoURL: req.fromPhotoURL || "",
+        avatarType: req.fromAvatarType || "google",
+        avatarId: req.fromAvatarId || "",
         friendsSince: ts
     };
     updates["friends/" + senderUid + "/" + me] = {
@@ -4436,6 +4553,8 @@ async function acceptFriendRequest(senderUid, req){
         username: myProfile ? myProfile.username : "",
         displayName: myProfile ? myProfile.displayName : "",
         photoURL: myProfile ? myProfile.photoURL : "",
+        avatarType: myProfile ? (myProfile.avatarType || "google") : "google",
+        avatarId: myProfile ? (myProfile.avatarId || "") : "",
         friendsSince: ts
     };
     updates["friendRequests/" + me + "/" + senderUid] = null;
@@ -4489,9 +4608,15 @@ function renderFriendRequests(){
 function requestRowEl(senderUid, r){
     const row = document.createElement("div");
     row.className = "friend-row";
-    const avatar = document.createElement(r.fromPhotoURL ? "img" : "div");
-    avatar.className = "f-avatar";
-    if(r.fromPhotoURL){ avatar.src = r.fromPhotoURL; avatar.alt = ""; }
+    const avatarWrap = document.createElement("div");
+    avatarWrap.className = "f-avatar";
+    const avatarInfo = {
+        photoURL: r.fromPhotoURL || "",
+        avatarType: r.fromAvatarType || "google",
+        avatarId: r.fromAvatarId || "",
+        name: r.fromDisplayName || "Player"
+    };
+    renderUserAvatar(avatarWrap, avatarInfo);
     const main = document.createElement("div");
     main.className = "f-main";
     const name = document.createElement("div");
@@ -4514,7 +4639,7 @@ function requestRowEl(senderUid, r){
     dec.addEventListener("click", function(){ declineFriendRequest(senderUid); });
     actions.appendChild(acc);
     actions.appendChild(dec);
-    row.appendChild(avatar);
+    row.appendChild(avatarWrap);
     row.appendChild(main);
     row.appendChild(actions);
     return row;
@@ -4553,9 +4678,15 @@ function renderGameInvites(){
 function inviteRowEl(inviteId, inv, isSent){
     const row = document.createElement("div");
     row.className = "friend-row";
-    const avatar = document.createElement(inv.fromPhotoURL ? "img" : "div");
-    avatar.className = "f-avatar";
-    if(inv.fromPhotoURL){ avatar.src = inv.fromPhotoURL; avatar.alt = ""; }
+    const avatarWrap = document.createElement("div");
+    avatarWrap.className = "f-avatar";
+    const avatarInfo = {
+        photoURL: inv.fromPhotoURL || "",
+        avatarType: inv.fromAvatarType || "google",
+        avatarId: inv.fromAvatarId || "",
+        name: inv.fromDisplayName || "Player"
+    };
+    renderUserAvatar(avatarWrap, avatarInfo);
     const main = document.createElement("div");
     main.className = "f-main";
     const title = document.createElement("div");
@@ -4603,7 +4734,7 @@ function inviteRowEl(inviteId, inv, isSent){
         actions.appendChild(dec);
     }
 
-    row.appendChild(avatar);
+    row.appendChild(avatarWrap);
     row.appendChild(main);
     row.appendChild(actions);
     return row;
@@ -4616,8 +4747,28 @@ function showFriendProfile(uid){
         const p = s.val();
         if(!p){ showNotification("Profile not found."); return; }
         const photo = document.getElementById("friendPhoto");
-        if(p.photoURL){ photo.src = p.photoURL; photo.style.display = ""; }
-        else photo.style.display = "none";
+        const avatar = { avatarType: p.avatarType || "google", avatarId: p.avatarId || "", photoURL: p.photoURL || "", name: p.displayName || "Player" };
+        if(avatar.avatarType === "cartoon" && avatar.avatarId){
+            const found = getAvatarById(avatar.avatarId);
+            if(found){
+                photo.src = found.url;
+                photo.style.display = "";
+            }
+            else if(avatar.photoURL){
+                photo.src = avatar.photoURL;
+                photo.style.display = "";
+            }
+            else{
+                photo.style.display = "none";
+            }
+        }
+        else if(avatar.photoURL){
+            photo.src = avatar.photoURL;
+            photo.style.display = "";
+        }
+        else{
+            photo.style.display = "none";
+        }
         document.getElementById("friendName").textContent = p.displayName || "";
         document.getElementById("friendUsername").textContent = "@" + (p.username || "");
         const st = p.stats || {};
@@ -4677,6 +4828,8 @@ async function sendGameInvite(friendUid){
         fromUsername: myProfile ? myProfile.username : "",
         fromDisplayName: myProfile ? myProfile.displayName : "",
         fromPhotoURL: myProfile ? myProfile.photoURL : "",
+        fromAvatarType: myProfile ? (myProfile.avatarType || "google") : "google",
+        fromAvatarId: myProfile ? (myProfile.avatarId || "") : "",
         roomCode: code,
         boardSize: (game && game.size) ? game.size : selectedSize,
         timestamp: firebase.database.ServerValue.TIMESTAMP,
@@ -4993,13 +5146,17 @@ document.getElementById("startComputer").addEventListener("click", () => {
                 uid: currentUser ? currentUser.uid : "local",
                 name: name,
                 username: myProfile ? myProfile.username : "",
-                photoURL: myProfile ? myProfile.photoURL : ""
+                photoURL: myProfile ? myProfile.photoURL : "",
+                avatarType: myProfile ? (myProfile.avatarType || "google") : "google",
+                avatarId: myProfile ? (myProfile.avatarId || "") : ""
             },
             p2:{
                 uid: "computer",
                 name: "🤖 Computer",
                 username: "",
-                photoURL: ""
+                photoURL: "",
+                avatarType: "google",
+                avatarId: ""
             }
         },
 
@@ -5054,13 +5211,17 @@ document.getElementById("startOffline").addEventListener("click", () => {
                 uid: "offline_p1",
                 name: p1,
                 username: "",
-                photoURL: ""
+                photoURL: "",
+                avatarType: "google",
+                avatarId: ""
             },
             p2:{
                 uid: "offline_p2",
                 name: p2,
                 username: "",
-                photoURL: ""
+                photoURL: "",
+                avatarType: "google",
+                avatarId: ""
             }
         },
 
