@@ -71,7 +71,7 @@ FIREBASE SECURITY RULES (apply in Firebase Console > Realtime Database > Rules):
     "rooms": {
       "$roomId": {
         ".read": true,
-        ".write": "auth != null && (!data.exists() || root.child('rooms/' + $roomId + '/players/p1/uid').val() === auth.uid || root.child('rooms/' + $roomId + '/players/p2/uid').val() === auth.uid)"
+        ".write": "auth != null && (!data.exists() || root.child('rooms/' + $roomId + '/players/p1/uid').val() === auth.uid || root.child('rooms/' + $roomId + '/players/p2/uid').val() === auth.uid || (!root.child('rooms/' + $roomId + '/players/p2/uid').exists() && newData.child('players/p2/uid').val() === auth.uid))"
       }
     },
     "gameResults": {
@@ -2392,49 +2392,6 @@ function loadProfile(){
 }
 
 
-/* ================= GAME STATISTICS ================= */
-
-function updateGameStats(){
-
-    if(!currentUser || !game || !game.finished) return;
-    if(!game.gameId) return;
-    if(resultRecorded) return;
-
-    const mySlot = myPlayer;
-    if(!mySlot) return;
-
-    const myScore = Number(game.scores[mySlot]) || 0;
-    const oppSlot = mySlot === "p1" ? "p2" : "p1";
-    const oppScore = Number(game.scores[oppSlot]) || 0;
-
-    let result;
-    if(myScore > oppScore) result = "win";
-    else if(myScore < oppScore) result = "loss";
-    else result = "draw";
-
-    const gameId = game.gameId;
-    const uid = currentUser.uid;
-    const boxes = myScore;
-
-    resultRecorded = true;
-
-    const markerRef = db.ref("gameResults/" + gameId + "/" + uid);
-
-    markerRef.transaction(function(current){
-        if(current) return current;
-        return { recorded: true, result: result, boxes: boxes };
-    }).then(function(res){
-        if(res.committed){
-            return updateStats(uid, result, boxes);
-        }
-    }).catch(function(error){
-        console.error(error);
-        resultRecorded = false;
-    });
-
-}
-
-
 async function updateStats(uid, result, boxes){
 
     const ref = db.ref("players/" + uid + "/stats");
@@ -3057,34 +3014,6 @@ async function performJoin(code, name){
 }
 
 
-/* ================= OPEN GAME ================= */
-
-function openGame(){
-
-    resultRecorded = false;
-
-    document
-    .getElementById("setupScreen")
-    .style.display =
-    "none";
-
-
-    document
-    .getElementById("gameScreen")
-    .style.display =
-    "block";
-
-
-    document
-    .getElementById("roomDisplay")
-    .textContent =
-    roomCode;
-
-    setupChatListener();
-
-}
-
-
 /* ================= LISTEN ================= */
 
 function listenRoom(){
@@ -3527,6 +3456,10 @@ function createLine(
     "line "+type;
 
 
+    line.dataset.key =
+    key;
+
+
     line.style.left =
     left+"px";
 
@@ -3781,64 +3714,6 @@ async function makeOnlineMove(key){
         return current;
 
     });
-
-}
-
-
-/* ================= WINNER ================= */
-
-function showWinner(){
-
-    let text = "";
-
-
-    if(
-        game.scores.p1 >
-        game.scores.p2
-    ){
-
-        text =
-        "🏆 "+
-        (getPlayerInfo("p1").name || "Player 1")+
-        " WINS!";
-
-    }
-
-    else if(
-        game.scores.p2 >
-        game.scores.p1
-    ){
-
-        text =
-        "🏆 "+
-        (getPlayerInfo("p2").name || "Player 2")+
-        " WINS!";
-
-    }
-
-    else{
-
-        text =
-        "🤝 DRAW!";
-
-    }
-
-
-    document
-    .getElementById("result")
-    .textContent =
-    text;
-
-
-    document
-    .getElementById("turnDisplay")
-    .textContent =
-    "🏁 GAME FINISHED";
-
-    if(!chatFinishAnnounced){
-        chatFinishAnnounced = true;
-        renderChatMessage({ system: true, text: "🏁 Game finished" });
-    }
 
 }
 
