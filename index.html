@@ -6,6 +6,86 @@
 
 <title>Dots Battle</title>
 
+<!--
+FIREBASE SECURITY RULES (apply in Firebase Console > Realtime Database > Rules):
+
+{
+  "rules": {
+    "players": {
+      "$uid": {
+        ".read": true,
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "publicProfiles": {
+      "$uid": {
+        ".read": true,
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "usernames": {
+      "$username": {
+        ".read": true,
+        ".write": "auth != null && root.child('players/' + auth.uid + '/username').val() === $username"
+      }
+    },
+    "friends": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        "$friendUid": {
+          ".validate": "newData.hasChildren(['uid', 'username', 'displayName', 'photoURL']) && newData.child('uid').val() === $friendUid"
+        }
+      }
+    },
+    "friendRequests": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        "$fromUid": {
+          ".validate": "newData.hasChildren(['fromUid', 'fromUsername', 'fromDisplayName', 'status']) && newData.child('fromUid').val() === $fromUid"
+        }
+      }
+    },
+    "activeGameInvites": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('activeGameInvites/' + $uid + '/' + auth.uid).exists())",
+        ".write": "auth != null && (auth.uid === $uid || root.child('activeGameInvites/' + auth.uid + '/' + $uid).exists())",
+        "$fromUid": {
+          ".validate": "newData.hasChildren(['fromUid', 'toUid', 'roomCode', 'boardSize', 'createdAt', 'expiresAt', 'status']) && newData.child('fromUid').val() === $fromUid && newData.child('toUid').val() === $uid"
+        }
+      }
+    },
+    "gameInvites": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('gameInvites/' + $uid + '/' + auth.uid).exists())",
+        ".write": "auth != null && (auth.uid === $uid || root.child('gameInvites/' + auth.uid + '/' + $uid).exists())"
+      }
+    },
+    "presence": {
+      "$uid": {
+        ".read": true,
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "rooms": {
+      "$roomId": {
+        ".read": true,
+        ".write": "auth != null && (!data.exists() || root.child('rooms/' + $roomId + '/players/p1/uid').val() === auth.uid || root.child('rooms/' + $roomId + '/players/p2/uid').val() === auth.uid)"
+      }
+    },
+    "gameResults": {
+      "$gameId": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid"
+        }
+      }
+    }
+  }
+}
+-->
+
 <style>
 *{
     box-sizing:border-box;
@@ -4086,10 +4166,100 @@ let activeFriendUid = null;
 
 const GAME_INVITE_TTL = 10 * 60 * 1000;
 
+const INVITE_COOLDOWN_MS = 20 * 1000;
+
+let activeGameInvitesRef = null;
+
+let inviteCountdownTimers = {};
+
 
 function isExpired(ts){
     if(!ts) return false;
     return (Date.now() - ts) > GAME_INVITE_TTL;
+}
+
+
+function isInviteExpiredByExpiresAt(expiresAt){
+    if(!expiresAt) return true;
+    return Date.now() > expiresAt;
+}
+
+
+function getActiveInvitePath(receiverUid, senderUid){
+    return "activeGameInvites/" + receiverUid + "/" + senderUid;
+}
+
+
+function getActiveInviteSenderPath(senderUid, receiverUid){
+    return "activeGameInvites/" + senderUid + "/" + receiverUid;
+}
+
+
+async function getActiveInvite(receiverUid, senderUid){
+    if(!db) return null;
+    const snap = await db.ref(getActiveInvitePath(receiverUid, senderUid)).once("value");
+    return snap.val() || null;
+}
+
+
+async function getSentActiveInvite(senderUid, receiverUid){
+    if(!db) return null;
+    const snap = await db.ref(getActiveInviteSenderPath(senderUid, receiverUid)).once("value");
+    return snap.val() || null;
+}
+
+
+async function canSendInvite(friendUid){
+    if(!currentUser || !db) return false;
+    const me = currentUser.uid;
+    const active = await getSentActiveInvite(me, friendUid);
+    if(!active) return true;
+    if(active.status === "pending" && active.expiresAt && Date.now() < active.expiresAt){
+        return false;
+    }
+    if(active.status === "pending" && active.expiresAt && Date.now() >= active.expiresAt){
+        await db.ref(getActiveInviteSenderPath(me, friendUid)).remove();
+        await db.ref(getActiveInvitePath(friendUid, me)).remove();
+        return true;
+    }
+    return true;
+}
+
+
+async function cleanupStaleInvites(){
+    if(!currentUser || !db) return;
+    const me = currentUser.uid;
+    const snap = await db.ref("activeGameInvites/" + me).once("value");
+    const data = snap.val() || {};
+    const updates = {};
+    let changed = false;
+    for(const senderUid in data){
+        const inv = data[senderUid];
+        if(!inv) continue;
+        if(inv.status === "pending" && inv.expiresAt && Date.now() > inv.expiresAt){
+            updates["activeGameInvites/" + me + "/" + senderUid] = { status: "expired" };
+            updates[getActiveInviteSenderPath(senderUid, me)] = { status: "expired" };
+            changed = true;
+        }
+    }
+    if(changed){
+        await db.ref().update(updates);
+    }
+}
+
+
+function deduplicateInvites(invites){
+    const bySender = {};
+    const list = Object.keys(invites).map(function(id){
+        return Object.assign({ inviteId: id }, invites[id]);
+    });
+    list.forEach(function(inv){
+        const key = inv.fromUid || "";
+        if(!bySender[key] || (inv.createdAt || 0) > (bySender[key].createdAt || 0)){
+            bySender[key] = inv;
+        }
+    });
+    return bySender;
 }
 
 
@@ -4156,6 +4326,7 @@ function cleanupFriendsListeners(){
     if(friendsRef){ friendsRef.off(); friendsRef = null; }
     if(friendRequestsRef){ friendRequestsRef.off(); friendRequestsRef = null; }
     if(gameInvitesRef){ gameInvitesRef.off(); gameInvitesRef = null; }
+    if(activeGameInvitesRef){ activeGameInvitesRef.off(); activeGameInvitesRef = null; }
 
     for(const uid in presenceRefs){
         presenceRefs[uid].off();
@@ -4163,6 +4334,11 @@ function cleanupFriendsListeners(){
     presenceRefs = {};
 
     currentFriends = {};
+
+    for(const id in inviteCountdownTimers){
+        clearInterval(inviteCountdownTimers[id]);
+    }
+    inviteCountdownTimers = {};
 
 }
 
@@ -4202,6 +4378,30 @@ function initializeFriendsListeners(){
         updateFriendsBadges();
     });
 
+    cleanupStaleInvites().then(function(){
+        setupActiveInviteListener();
+    });
+
+}
+
+
+function setupActiveInviteListener(){
+
+    if(!currentUser || !db) return;
+    if(activeGameInvitesRef){
+        activeGameInvitesRef.off();
+        activeGameInvitesRef = null;
+    }
+
+    const uid = currentUser.uid;
+    activeGameInvitesRef = db.ref("activeGameInvites/" + uid);
+    activeGameInvitesRef.on("value", function(){
+        if(document.getElementById("friendsModal").classList.contains("open")
+           && friendsTab === "invites"){
+            renderGameInvites();
+        }
+        updateFriendsBadges();
+    });
 }
 
 
@@ -4340,7 +4540,9 @@ function renderFriends(){
             username: f.username || "",
             photoURL: f.photoURL || "",
             online: presence.state === "online",
-            presence: presence
+            presence: presence,
+            avatarType: f.avatarType || "google",
+            avatarId: f.avatarId || ""
         };
     });
     enriched.sort(function(a, b){
@@ -4349,12 +4551,15 @@ function renderFriends(){
     });
     content.innerHTML = "";
     enriched.forEach(function(f){
-        content.appendChild(friendRowEl(f));
+        friendRowEl(f).then(function(row){
+            content.appendChild(row);
+        });
     });
 }
 
 
-function friendRowEl(f){
+async function friendRowEl(f){
+
     const row = document.createElement("div");
     row.className = "friend-row";
     row.setAttribute("data-uid", f.uid);
@@ -4398,7 +4603,27 @@ function friendRowEl(f){
     const inv = document.createElement("button");
     inv.className = "f-btn invite";
     inv.textContent = "🎮 Invite";
-    if(!f.online) inv.disabled = true;
+
+    if(!f.online){
+        inv.disabled = true;
+        inv.title = "Friend is offline";
+    }
+    else if(currentUser){
+        const canSend = await canSendInvite(f.uid);
+        if(!canSend){
+            const active = await getSentActiveInvite(currentUser.uid, f.uid);
+            if(active && active.expiresAt){
+                const remaining = Math.max(0, Math.ceil((active.expiresAt - Date.now()) / 1000));
+                inv.textContent = "⏳ Sent (" + remaining + "s)";
+                inv.disabled = true;
+            }
+            else{
+                inv.textContent = "⏳ Sent";
+                inv.disabled = true;
+            }
+        }
+    }
+
     inv.addEventListener("click", function(){ sendGameInvite(f.uid); });
     actions.appendChild(view);
     actions.appendChild(inv);
@@ -4411,6 +4636,7 @@ function friendRowEl(f){
 
 
 function searchPlayers(query){
+
     const results = document.getElementById("friendSearchResults");
     if(!results) return;
     const q = (query || "").trim().toLowerCase().replace(/^@/, "").replace(/[^a-z0-9_]/g, "");
@@ -4448,7 +4674,8 @@ function searchPlayers(query){
 }
 
 
-function searchResultEl(uid, p){
+async function searchResultEl(uid, p){
+
     const row = document.createElement("div");
     row.className = "friend-row";
     const avatarWrap = document.createElement("div");
@@ -4476,12 +4703,45 @@ function searchResultEl(uid, p){
     view.className = "f-btn view-friend";
     view.textContent = "View Profile";
     view.addEventListener("click", function(){ showFriendProfile(uid); });
-    const add = document.createElement("button");
-    add.className = "f-btn invite";
-    add.textContent = "➕ Add Friend";
-    add.addEventListener("click", function(){ sendFriendRequest(uid, p); });
-    actions.appendChild(view);
-    actions.appendChild(add);
+
+    const me = currentUser ? currentUser.uid : null;
+    if(me && uid === me){
+        const you = document.createElement("span");
+        you.className = "f-sub";
+        you.textContent = "You";
+        actions.appendChild(you);
+    }
+    else if(currentFriends && currentFriends[uid]){
+        const already = document.createElement("span");
+        already.className = "f-sub";
+        already.textContent = "✓ Already Friends";
+        actions.appendChild(already);
+    }
+    else if(me){
+        const outSnap = await db.ref("friendRequests/" + uid + "/" + me).once("value");
+        const incSnap = await db.ref("friendRequests/" + me + "/" + uid).once("value");
+        if(outSnap.exists()){
+            const pending = document.createElement("span");
+            pending.className = "f-sub";
+            pending.textContent = "⏳ Request Sent";
+            actions.appendChild(pending);
+        }
+        else if(incSnap.exists()){
+            const acc = document.createElement("button");
+            acc.className = "f-btn accept";
+            acc.textContent = "👤 Accept Request";
+            acc.addEventListener("click", function(){ acceptFriendRequest(uid, incSnap.val()); });
+            actions.appendChild(acc);
+        }
+        else{
+            const add = document.createElement("button");
+            add.className = "f-btn invite";
+            add.textContent = "➕ Add Friend";
+            add.addEventListener("click", function(){ sendFriendRequest(uid, p); });
+            actions.appendChild(add);
+        }
+    }
+
     row.appendChild(avatarWrap);
     row.appendChild(main);
     row.appendChild(actions);
@@ -4647,35 +4907,63 @@ function requestRowEl(senderUid, r){
 
 
 function renderGameInvites(){
+
     const content = document.getElementById("friendsContent");
     if(!content) return;
     const me = currentUser.uid;
-    db.ref("gameInvites/" + me).once("value", function(s){
+
+    for(const id in inviteCountdownTimers){
+        clearInterval(inviteCountdownTimers[id]);
+    }
+    inviteCountdownTimers = {};
+
+    db.ref("activeGameInvites/" + me).once("value", function(s){
         const data = s.val() || {};
+        const invites = Object.keys(data).map(function(key){
+            return Object.assign({ inviteId: data[key].inviteId || key }, data[key]);
+        });
+
         content.innerHTML = "";
         let has = false;
-        for(const inviteId in data){
-            const inv = data[inviteId];
-            if(!inv) continue;
-            if(inv.fromUid === me){
-                has = true;
-                content.appendChild(inviteRowEl(inviteId, inv, true));
+
+        invites.forEach(function(inv){
+            if(!inv || !inv.fromUid) return;
+            if(inv.status !== "pending") return;
+            if(inv.expiresAt && Date.now() > inv.expiresAt) return;
+            has = true;
+            const isSent = inv.fromUid === me;
+            const row = inviteRowEl(inv.inviteId, inv, isSent);
+            content.appendChild(row);
+
+            if(inv.expiresAt){
+                const timerKey = isSent ? ("sent_" + inv.fromUid) : ("recv_" + inv.fromUid);
+                inviteCountdownTimers[timerKey] = setInterval(function(){
+                    const remaining = Math.max(0, Math.ceil((inv.expiresAt - Date.now()) / 1000));
+                    const sub = row.querySelector(".f-sub");
+                    if(sub){
+                        if(isSent){
+                            sub.textContent = remaining > 0 ? ("⏳ Sent (" + remaining + "s)") : "⌛ Expired";
+                        }
+                        else{
+                            sub.textContent = "Board: " + (inv.boardSize || "?") + " × " + (inv.boardSize || "?") + "  •  Expires in " + remaining + "s";
+                        }
+                    }
+                    if(remaining <= 0){
+                        clearInterval(inviteCountdownTimers[timerKey]);
+                        delete inviteCountdownTimers[timerKey];
+                        if(row.parentNode) row.parentNode.removeChild(row);
+                    }
+                }, 1000);
             }
-        }
-        for(const inviteId in data){
-            const inv = data[inviteId];
-            if(!inv) continue;
-            if(inv.fromUid !== me){
-                has = true;
-                content.appendChild(inviteRowEl(inviteId, inv, false));
-            }
-        }
+        });
+
         if(!has) content.innerHTML = '<div class="empty-note">No game invitations.</div>';
     });
 }
 
 
 function inviteRowEl(inviteId, inv, isSent){
+
     const row = document.createElement("div");
     row.className = "friend-row";
     const avatarWrap = document.createElement("div");
@@ -4696,26 +4984,47 @@ function inviteRowEl(inviteId, inv, isSent){
         : ((inv.fromDisplayName || "friend") + " invited you");
     const sub = document.createElement("div");
     sub.className = "f-sub";
-    sub.textContent = "Board: " + (inv.boardSize || "?") + " × " + (inv.boardSize || "?")
-        + (isExpired(inv.timestamp) ? "  •  Expired" : "");
+    const remaining = inv.expiresAt ? Math.max(0, Math.ceil((inv.expiresAt - Date.now()) / 1000)) : null;
+    if(isSent){
+        sub.textContent = remaining > 0 ? ("⏳ Sent (" + remaining + "s)") : "⌛ Expired";
+    }
+    else{
+        sub.textContent = "Board: " + (inv.boardSize || "?") + " × " + (inv.boardSize || "?")
+            + (remaining !== null ? "  •  Expires in " + remaining + "s" : "");
+    }
     main.appendChild(title);
     main.appendChild(sub);
     const actions = document.createElement("div");
     actions.className = "f-actions";
 
     if(isSent){
-        const st = document.createElement("span");
-        st.className = "f-sub";
-        st.textContent = (inv.status === "accepted") ? "✓ Accepted"
-            : (inv.status === "declined") ? "❌ Declined" : "Waiting...";
-        const cancel = document.createElement("button");
-        cancel.className = "f-btn decline";
-        cancel.textContent = "Cancel";
-        cancel.addEventListener("click", function(){ cancelGameInvite(inviteId, inv.fromUid); });
-        actions.appendChild(st);
-        actions.appendChild(cancel);
+        if(inv.status === "accepted"){
+            const st = document.createElement("span");
+            st.className = "f-sub";
+            st.textContent = "✓ Accepted";
+            actions.appendChild(st);
+        }
+        else if(inv.status === "declined"){
+            const st = document.createElement("span");
+            st.className = "f-sub";
+            st.textContent = "❌ Declined";
+            actions.appendChild(st);
+        }
+        else if(inv.expiresAt && Date.now() > inv.expiresAt){
+            const st = document.createElement("span");
+            st.className = "f-sub";
+            st.textContent = "⌛ Expired";
+            actions.appendChild(st);
+        }
+        else{
+            const cancel = document.createElement("button");
+            cancel.className = "f-btn decline";
+            cancel.textContent = "Cancel";
+            cancel.addEventListener("click", function(){ cancelGameInvite(inviteId, inv.fromUid); });
+            actions.appendChild(cancel);
+        }
     }
-    else if(isExpired(inv.timestamp)){
+    else if(inv.expiresAt && Date.now() > inv.expiresAt){
         const exp = document.createElement("span");
         exp.className = "f-sub";
         exp.textContent = "Expired";
@@ -4805,12 +5114,28 @@ function appendStat(box, label, value){
 
 
 async function sendGameInvite(friendUid){
+
     if(!currentUser || !db) return;
+
+    const me = currentUser.uid;
 
     const pres = await db.ref("presence/" + friendUid).once("value");
     const p = pres.val() || {};
     if(p.state !== "online"){
         showNotification("Friend is offline. Invite when they are online.");
+        return;
+    }
+
+    const fSnap = await db.ref("friends/" + me + "/" + friendUid).once("value");
+    if(!fSnap.exists()){
+        showNotification("You can only invite friends.");
+        return;
+    }
+
+    if(!await canSendInvite(friendUid)){
+        const active = await getSentActiveInvite(me, friendUid);
+        const remaining = active && active.expiresAt ? Math.max(0, Math.ceil((active.expiresAt - Date.now()) / 1000)) : 20;
+        showNotification("⏳ Invite already sent. Wait " + remaining + "s.");
         return;
     }
 
@@ -4821,10 +5146,12 @@ async function sendGameInvite(friendUid){
         code = roomCode;
     }
 
-    const inviteId = db.ref("gameInvites/" + friendUid).push().key;
+    const inviteId = db.ref("activeGameInvites/" + friendUid).push().key;
+    const now = Date.now();
     const data = {
         inviteId: inviteId,
-        fromUid: currentUser.uid,
+        fromUid: me,
+        toUid: friendUid,
         fromUsername: myProfile ? myProfile.username : "",
         fromDisplayName: myProfile ? myProfile.displayName : "",
         fromPhotoURL: myProfile ? myProfile.photoURL : "",
@@ -4832,29 +5159,42 @@ async function sendGameInvite(friendUid){
         fromAvatarId: myProfile ? (myProfile.avatarId || "") : "",
         roomCode: code,
         boardSize: (game && game.size) ? game.size : selectedSize,
-        timestamp: firebase.database.ServerValue.TIMESTAMP,
+        createdAt: now,
+        expiresAt: now + INVITE_COOLDOWN_MS,
         status: "pending"
     };
+
     const updates = {};
+    updates["activeGameInvites/" + friendUid + "/" + me] = data;
+    updates["activeGameInvites/" + me + "/" + friendUid] = data;
     updates["gameInvites/" + friendUid + "/" + inviteId] = data;
-    updates["gameInvites/" + currentUser.uid + "/" + inviteId] = data;
+    updates["gameInvites/" + me + "/" + inviteId] = data;
+
     await db.ref().update(updates);
     showNotification("🎮 Game invitation sent. Waiting for response...");
 }
 
 
 async function acceptGameInvite(inviteId, invite){
+
     if(!currentUser || !db) return;
-    if(isExpired(invite.timestamp)){
+
+    const now = Date.now();
+    if(invite.expiresAt && now > invite.expiresAt){
         showNotification("⌛ Invitation expired.");
-        markInviteStatus(invite.fromUid, inviteId, "expired");
+        await db.ref("activeGameInvites/" + currentUser.uid + "/" + invite.fromUid).remove();
+        await db.ref("activeGameInvites/" + invite.fromUid + "/" + currentUser.uid).remove();
+        await db.ref("gameInvites/" + currentUser.uid + "/" + inviteId).update({ status: "expired" });
+        await db.ref("gameInvites/" + invite.fromUid + "/" + inviteId).remove();
         return;
     }
+
     const code = invite.roomCode;
     const snap = await db.ref("rooms/" + code).once("value");
     if(!snap.exists()){
         showNotification("❌ Room no longer exists.");
-        markInviteStatus(invite.fromUid, inviteId, "expired");
+        await db.ref("activeGameInvites/" + currentUser.uid + "/" + invite.fromUid).remove();
+        await db.ref("activeGameInvites/" + invite.fromUid + "/" + currentUser.uid).remove();
         return;
     }
     const data = snap.val();
@@ -4862,9 +5202,12 @@ async function acceptGameInvite(inviteId, invite){
         showNotification("❌ Room already full.");
         return;
     }
+
     const ok = await performJoin(code, myProfile ? myProfile.displayName : (invite.fromUsername || "Player"));
     if(ok){
         const updates = {};
+        updates["activeGameInvites/" + currentUser.uid + "/" + invite.fromUid] = null;
+        updates["activeGameInvites/" + invite.fromUid + "/" + currentUser.uid] = null;
         updates["gameInvites/" + currentUser.uid + "/" + inviteId] = { status: "accepted" };
         updates["gameInvites/" + invite.fromUid + "/" + inviteId] = null;
         await db.ref().update(updates).catch(function(e){ console.error(e); });
@@ -4878,6 +5221,8 @@ async function acceptGameInvite(inviteId, invite){
 async function declineGameInvite(inviteId, fromUid){
     if(!currentUser || !db) return;
     const updates = {};
+    updates["activeGameInvites/" + currentUser.uid + "/" + fromUid] = null;
+    updates["activeGameInvites/" + fromUid + "/" + currentUser.uid] = null;
     updates["gameInvites/" + currentUser.uid + "/" + inviteId] = { status: "declined" };
     updates["gameInvites/" + fromUid + "/" + inviteId] = null;
     await db.ref().update(updates).catch(function(e){ console.error(e); });
@@ -4888,7 +5233,9 @@ async function declineGameInvite(inviteId, fromUid){
 async function cancelGameInvite(inviteId, fromUid){
     if(!currentUser || !db) return;
     const updates = {};
-    updates["gameInvites/" + currentUser.uid + "/" + inviteId] = null;
+    updates["activeGameInvites/" + currentUser.uid + "/" + fromUid] = null;
+    updates["activeGameInvites/" + fromUid + "/" + currentUser.uid] = null;
+    updates["gameInvites/" + currentUser.uid + "/" + inviteId] = { status: "cancelled" };
     updates["gameInvites/" + fromUid + "/" + inviteId] = null;
     await db.ref().update(updates).catch(function(e){ console.error(e); });
     showNotification("Invitation cancelled.");
