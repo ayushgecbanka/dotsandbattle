@@ -3906,6 +3906,10 @@ function setupChatListener(){
 }
 
 
+function closeGifPicker(){
+}
+
+
 function cleanupChatListener(){
 
     closeStickerPicker();
@@ -6681,6 +6685,11 @@ function showWinner(){
 
 
 /* ================= UPDATE GAME STATS ================= */
+
+function recordResultIdempotent(result){
+    updateGameStats();
+}
+
 
 function updateGameStats(){
 
