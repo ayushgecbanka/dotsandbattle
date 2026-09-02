@@ -1830,7 +1830,8 @@ Player 2
         <h2>👥 FRIENDS <span id="friendsModalBadge" class="friends-badge" style="display:none;"></span></h2>
 
         <div class="friends-search">
-            <input id="friendSearch" type="text" placeholder="🔎 Search by username or name...">
+            <input id="friendSearch" type="text" placeholder="🔎 Enter exact username...">
+            <button type="button" class="btn create-btn" id="friendSearchBtn">🔍 Search</button>
         </div>
         <div id="friendSearchResults" class="friend-search-results"></div>
 
@@ -4162,6 +4163,10 @@ let currentFriends = {};
 let presenceRefs = {};
 let friendsTab = "friends";
 let friendSearchTimer = null;
+
+let lastFriendSearchTime = 0;
+
+const FRIEND_SEARCH_COOLDOWN_MS = 1000;
 let activeFriendUid = null;
 
 const GAME_INVITE_TTL = 10 * 60 * 1000;
@@ -4640,37 +4645,33 @@ function searchPlayers(query){
     const results = document.getElementById("friendSearchResults");
     if(!results) return;
     const q = (query || "").trim().toLowerCase().replace(/^@/, "").replace(/[^a-z0-9_]/g, "");
-    if(!q){ results.innerHTML = ""; return; }
-    results.innerHTML = '<div class="empty-note">Searching...</div>';
+    if(!q || q.length < 3){
+        results.innerHTML = '<div class="empty-note">Enter the complete username.</div>';
+        return;
+    }
 
-    db.ref("usernames")
-        .orderByKey()
-        .startAt(q)
-        .endAt(q + "~")
-        .limitToFirst(20)
-        .once("value", function(snap){
-            const map = snap.val() || {};
-            const uids = [];
-            for(const k in map){
-                if(uids.indexOf(map[k]) === -1) uids.push(map[k]);
-            }
-            if(!uids.length){
-                results.innerHTML = '<div class="empty-note">No players found.</div>';
+    const exactRef = db.ref("usernames/" + q);
+    exactRef.once("value", function(snap){
+        const data = snap.val();
+        if(!data){
+            results.innerHTML = '<div class="empty-note">No user found with that username.</div>';
+            return;
+        }
+        const uid = typeof data === "string" ? data : (data.uid || "");
+        if(!uid){
+            results.innerHTML = '<div class="empty-note">No user found with that username.</div>';
+            return;
+        }
+        db.ref("publicProfiles/" + uid).once("value", function(snap){
+            const p = snap.val();
+            if(!p || p.uid === currentUser.uid){
+                results.innerHTML = '<div class="empty-note">No user found with that username.</div>';
                 return;
             }
-            Promise.all(uids.map(function(uid){
-                return db.ref("publicProfiles/" + uid).once("value")
-                    .then(function(s){ return { uid: uid, p: s.val() || null }; });
-            })).then(function(list){
-                const found = list.filter(function(x){ return x.p && x.uid !== currentUser.uid; });
-                results.innerHTML = "";
-                if(!found.length){
-                    results.innerHTML = '<div class="empty-note">No players found.</div>';
-                    return;
-                }
-                found.forEach(function(x){ results.appendChild(searchResultEl(x.uid, x.p)); });
-            });
+            results.innerHTML = "";
+            results.appendChild(searchResultEl(uid, p));
         });
+    });
 }
 
 
@@ -5280,11 +5281,24 @@ function initializeFriends(){
         b.addEventListener("click", function(){ setFriendsTab(b.getAttribute("data-tab")); });
     });
     const search = document.getElementById("friendSearch");
-    if(search){
-        search.addEventListener("input", function(){
-            if(friendSearchTimer) clearTimeout(friendSearchTimer);
-            const v = search.value;
-            friendSearchTimer = setTimeout(function(){ searchPlayers(v); }, 350);
+    const searchBtn = document.getElementById("friendSearchBtn");
+    if(search && searchBtn){
+        function doSearch(){
+            const now = Date.now();
+            if(now - lastFriendSearchTime < FRIEND_SEARCH_COOLDOWN_MS){
+                return;
+            }
+            lastFriendSearchTime = now;
+            searchBtn.disabled = true;
+            setTimeout(function(){ searchBtn.disabled = false; }, 1000);
+            searchPlayers(search.value);
+        }
+        searchBtn.addEventListener("click", doSearch);
+        search.addEventListener("keydown", function(e){
+            if(e.key === "Enter"){
+                e.preventDefault();
+                doSearch();
+            }
         });
     }
 }
