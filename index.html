@@ -3163,6 +3163,8 @@ function startDisconnectGracePeriod(opponentSlot){
 
 function renderGame(){
 
+    try{
+
     if(!game){
         return;
     }
@@ -3269,12 +3271,19 @@ function renderGame(){
 
     drawBoard();
 
+    }
+    catch(error){
+        console.error("[renderGame error]", error);
+    }
+
 }
 
 
 /* ================= DRAW BOARD ================= */
 
 function drawBoard(){
+
+    try{
 
     if(!game) return;
 
@@ -3456,6 +3465,11 @@ function drawBoard(){
 
         }
 
+    }
+
+    }
+    catch(error){
+        console.error("[drawBoard error]", error);
     }
 
 }
@@ -6431,6 +6445,8 @@ function restartGame(){
 
 function openGame(){
 
+    try{
+
     resultRecorded = false;
 
     document.getElementById("setupScreen").style.display = "none";
@@ -6459,6 +6475,15 @@ function openGame(){
     }
 
     renderGame();
+
+    }
+    catch(error){
+        console.error("[openGame error]", error);
+        const resultEl = document.getElementById("result");
+        if(resultEl){
+            resultEl.textContent = "⚠️ Game load error: " + (error.message || error);
+        }
+    }
 
 }
 
