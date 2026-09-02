@@ -3044,6 +3044,9 @@ function listenRoom(){
         snapshot.val();
 
 
+        if(!game) return;
+
+
         if(game.status === "forfeited" || game.status === "abandoned"){
 
             handleForfeitResult(game);
@@ -3160,6 +3163,17 @@ function startDisconnectGracePeriod(opponentSlot){
 
 function renderGame(){
 
+    if(!game){
+        return;
+    }
+
+    if(!game.scores) game.scores = {p1:0, p2:0};
+    if(!game.players) game.players = {p1:"", p2:""};
+    if(!game.lines) game.lines = {};
+    if(!game.boxes) game.boxes = {};
+    if(typeof game.finished === "undefined") game.finished = false;
+    if(!game.turn) game.turn = "p1";
+
     const p1 = getPlayerInfo("p1");
     const p2 = getPlayerInfo("p2");
 
@@ -3262,8 +3276,12 @@ function renderGame(){
 
 function drawBoard(){
 
+    if(!game) return;
+
     const board =
     document.getElementById("gameBoard");
+
+    if(!board) return;
 
 
     board.innerHTML = "";
@@ -3271,6 +3289,9 @@ function drawBoard(){
 
     const n =
     Number(game.size);
+
+
+    if(!n || n < 2) return;
 
 
     const width =
@@ -6419,8 +6440,11 @@ function openGame(){
     document.getElementById("roomDisplay").textContent =
     gameMode === "online" ? roomCode : "";
 
-    document.getElementById("roomDisplay").parentElement.style.display =
-    gameMode === "online" ? "block" : "none";
+    const roomParent = document.getElementById("roomDisplay").parentElement;
+    if(roomParent){
+        roomParent.style.display =
+        gameMode === "online" ? "block" : "none";
+    }
 
     if(gameMode === "online"){
 
