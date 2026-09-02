@@ -1872,6 +1872,19 @@ Player 2
 <div class="toast-container" id="toasts"></div>
 
 
+<!-- ================= LEAVE GAME MODAL ================= -->
+<div class="modal-overlay" id="leaveModal">
+    <div class="modal">
+        <h2>⚠️ Leave Game?</h2>
+        <p>Leaving now will count as a loss.</p>
+        <div class="modal-actions">
+            <button type="button" class="btn close-btn" id="leaveCancelBtn">CANCEL</button>
+            <button type="button" class="btn create-btn" id="leaveConfirmBtn">LEAVE GAME</button>
+        </div>
+    </div>
+</div>
+
+
 </div>
 
 <script>
@@ -1922,6 +1935,22 @@ let selectedDifficulty = "medium";
 let selectedAvatarCategory = "boys";
 
 let selectedAvatarId = null;
+
+let roomStatus = "";
+
+let playerLeft = false;
+
+let resultReason = "";
+
+let autoHomeTimer = null;
+
+let disconnectTimer = null;
+
+let resultHomeTimer = null;
+
+const RESULT_HOME_DELAY = 3000;
+
+const DISCONNECT_GRACE_PERIOD = 12000;
 
 
 /* ================= AVATARS ================= */
@@ -3060,6 +3089,14 @@ function openGame(){
 
 function listenRoom(){
 
+    if(disconnectTimer){
+
+        clearTimeout(disconnectTimer);
+
+        disconnectTimer = null;
+
+    }
+
     db
     .ref("rooms/"+roomCode)
     .on("value", snapshot => {
@@ -3075,9 +3112,114 @@ function listenRoom(){
         snapshot.val();
 
 
+        if(game.status === "forfeited" || game.status === "abandoned"){
+
+            handleForfeitResult(game);
+
+            return;
+
+        }
+
+        if(game.finished && !playerLeft){
+
+            handleGameEnd();
+
+            return;
+
+        }
+
         renderGame();
 
+        if(gameMode === "online" && game.players && !game.finished){
+
+            const oppSlot = myPlayer === "p1" ? "p2" : "p1";
+
+            const opp = game.players[oppSlot];
+
+            if(opp && opp.uid){
+
+                const presRef = db.ref("presence/" + opp.uid);
+
+                presRef.on("value", function(snap){
+
+                    const p = snap.val() || {};
+
+                    if(p.state !== "online" && !disconnectTimer && !playerLeft && !game.finished){
+
+                        startDisconnectGracePeriod(oppSlot);
+
+                    }
+
+                    else if(p.state === "online" && disconnectTimer){
+
+                        clearTimeout(disconnectTimer);
+
+                        disconnectTimer = null;
+
+                        renderChatMessage({ system: true, text: "✓ Opponent reconnected" });
+
+                    }
+
+                });
+
+            }
+
+        }
+
     });
+
+}
+
+
+function startDisconnectGracePeriod(opponentSlot){
+
+    if(disconnectTimer){
+
+        clearTimeout(disconnectTimer);
+
+    }
+
+    const opponentName = getPlayerInfo(opponentSlot).name || "Opponent";
+
+    renderChatMessage({ system: true, text: "⚠️ " + opponentName + " disconnected. Waiting for reconnection..." });
+
+    disconnectTimer = setTimeout(function(){
+
+        disconnectTimer = null;
+
+        if(!game || game.finished || playerLeft) return;
+
+        const me = currentUser.uid;
+
+        const mySlot = myPlayer;
+
+        const updates = {};
+
+        updates["rooms/" + roomCode + "/status"] = "abandoned";
+
+        updates["rooms/" + roomCode + "/finished"] = true;
+
+        updates["rooms/" + roomCode + "/resultReason"] = "disconnect";
+
+        updates["rooms/" + roomCode + "/winner"] = mySlot;
+
+        updates["rooms/" + roomCode + "/loser"] = opponentSlot;
+
+        db.ref().update(updates).catch(function(e){ console.error(e); });
+
+        renderChatMessage({ system: true, text: "🏁 " + opponentName + " did not reconnect. You win by forfeit." });
+
+        handleForfeitResult({
+
+            winner: mySlot,
+
+            loser: opponentSlot,
+
+            resultReason: "disconnect"
+
+        });
+
+    }, DISCONNECT_GRACE_PERIOD);
 
 }
 
@@ -5382,6 +5524,22 @@ function goHome(){
 
     }
 
+    if(resultHomeTimer){
+
+        clearTimeout(resultHomeTimer);
+
+        resultHomeTimer = null;
+
+    }
+
+    if(disconnectTimer){
+
+        clearTimeout(disconnectTimer);
+
+        disconnectTimer = null;
+
+    }
+
     gameMode = "";
 
     game = null;
@@ -5393,6 +5551,12 @@ function goHome(){
     resultRecorded = false;
 
     computerThinking = false;
+
+    roomStatus = "";
+
+    playerLeft = false;
+
+    resultReason = "";
 
     document.getElementById("setupScreen").style.display = "block";
 
@@ -5413,29 +5577,185 @@ function goHome(){
 }
 
 
-function goBack(){
+/* ================= ROOM LIFECYCLE ================= */
 
-    if(gameMode === "computer"){
+async function handleLocalForfeit(){
 
-        setMode("");
+    if(gameMode !== "online" || !roomCode || !db || !currentUser) return;
 
-        document.getElementById("modeScreen").style.display = "block";
+    if(playerLeft) return;
+
+    playerLeft = true;
+
+    resultReason = "forfeit";
+
+    const me = currentUser.uid;
+
+    const opponentSlot = myPlayer === "p1" ? "p2" : "p1";
+
+    const opponentUid = game && game.players && game.players[opponentSlot] && game.players[opponentSlot].uid;
+
+    const updates = {};
+
+    updates["rooms/" + roomCode + "/status"] = "forfeited";
+
+    updates["rooms/" + roomCode + "/finished"] = true;
+
+    updates["rooms/" + roomCode + "/resultReason"] = "forfeit";
+
+    updates["rooms/" + roomCode + "/winner"] = opponentSlot;
+
+    updates["rooms/" + roomCode + "/loser"] = myPlayer;
+
+    if(opponentUid){
+
+        updates["rooms/" + roomCode + "/players/" + myPlayer + "/left"] = true;
 
     }
 
-    else if(gameMode === "offline"){
+    await db.ref().update(updates).catch(function(e){ console.error(e); });
 
-        setMode("");
+    showForfeitResult();
 
-        document.getElementById("modeScreen").style.display = "block";
+    recordResultIdempotent("loss");
+
+    scheduleAutoHome();
+
+}
+
+
+function showForfeitResult(){
+
+    document.getElementById("result").innerHTML = "❌ GAME FORFEITED<br>You left the game.<br>This match counts as a loss.<br>" +
+
+        '<button class="btn back-btn" onclick="goHome()" style="margin-top:10px;">HOME</button>';
+
+    document.getElementById("turnDisplay").textContent = "🏁 GAME FORFEITED";
+
+    if(!chatFinishAnnounced){
+
+        chatFinishAnnounced = true;
+
+        renderChatMessage({ system: true, text: "🚪 You left the game. Opponent wins by forfeit." });
+
+    }
+
+}
+
+
+function handleForfeitResult(roomData){
+
+    if(playerLeft) return;
+
+    const winner = roomData.winner;
+
+    const loser = roomData.loser;
+
+    const reason = roomData.resultReason || "forfeit";
+
+    const mySlot = myPlayer;
+
+    const opponentSlot = mySlot === "p1" ? "p2" : "p1";
+
+    const iWon = winner === mySlot;
+
+    const opponentName = getPlayerInfo(opponentSlot).name || "Opponent";
+
+    let text = "";
+
+    if(iWon){
+
+        text = "🏆 YOU WIN BY FORFEIT!<br>" + opponentName + " left the game.<br>You win by forfeit.";
+
+    }
+
+    else{
+
+        text = "🤝 " + opponentName + " Wins!<br>You left the game.<br>You forfeited.";
+
+    }
+
+    document.getElementById("result").innerHTML = text + "<br>" +
+
+        '<button class="btn back-btn" onclick="goHome()" style="margin-top:10px;">HOME</button>';
+
+    document.getElementById("turnDisplay").textContent = "🏁 GAME FINISHED";
+
+    if(!chatFinishAnnounced){
+
+        chatFinishAnnounced = true;
+
+        renderChatMessage({ system: true, text: "🏁 Game finished" });
+
+    }
+
+    if(iWon){
+
+        recordResultIdempotent("win");
+
+    }
+
+    else{
+
+        recordResultIdempotent("loss");
+
+    }
+
+    scheduleAutoHome();
+
+}
+
+
+function scheduleAutoHome(){
+
+    if(resultHomeTimer){
+
+        clearTimeout(resultHomeTimer);
+
+    }
+
+    resultHomeTimer = setTimeout(function(){
+
+        resultHomeTimer = null;
+
+        goHome();
+
+    }, RESULT_HOME_DELAY);
+
+}
+
+
+function goBack(){
+
+    if(gameMode === "computer" || gameMode === "offline"){
+
+        if(game && !game.finished){
+
+            if(!window.confirm("⚠️ Leave Game?\n\nLeaving now will end this match.")){
+
+                return;
+
+            }
+
+        }
+
+        goHome();
 
     }
 
     else if(gameMode === "online"){
 
-        setMode("");
+        if(game && !game.finished && !playerLeft){
 
-        document.getElementById("modeScreen").style.display = "block";
+            document.getElementById("leaveModal").classList.add("open");
+
+        }
+
+        else{
+
+            goHome();
+
+        }
 
     }
 
@@ -5446,6 +5766,22 @@ function goBack(){
     }
 
 }
+
+
+document.getElementById("leaveCancelBtn").addEventListener("click", function(){
+
+    document.getElementById("leaveModal").classList.remove("open");
+
+});
+
+
+document.getElementById("leaveConfirmBtn").addEventListener("click", async function(){
+
+    document.getElementById("leaveModal").classList.remove("open");
+
+    await handleLocalForfeit();
+
+});
 
 
 /* ================= DIFFICULTY ================= */
@@ -6319,7 +6655,25 @@ function showWinner(){
 
     if(gameMode === "online"){
 
-        updateGameStats();
+        const mySlot = myPlayer;
+
+        const oppSlot = mySlot === "p1" ? "p2" : "p1";
+
+        const myScore = Number(game.scores[mySlot]) || 0;
+
+        const oppScore = Number(game.scores[oppSlot]) || 0;
+
+        let result;
+
+        if(myScore > oppScore) result = "win";
+
+        else if(myScore < oppScore) result = "loss";
+
+        else result = "draw";
+
+        recordResultIdempotent(result);
+
+        scheduleAutoHome();
 
     }
 
@@ -6432,19 +6786,31 @@ document.getElementById("gameBoard").addEventListener("click", function(e){
 
 document.getElementById("backHome").addEventListener("click",function(){
 
-    cleanupChatListener();
+    goBack();
 
-    if(computerTimer){
+});
 
-        clearTimeout(computerTimer);
 
-        computerTimer = null;
+window.addEventListener("popstate", function(e){
 
-        computerThinking = false;
+    if(gameMode === "online" && game && !game.finished && !playerLeft){
+
+        goBack();
+
+        e.preventDefault();
 
     }
 
-    goHome();
+});
+
+
+window.addEventListener("beforeunload", function(e){
+
+    if(gameMode === "online" && game && !game.finished && !playerLeft){
+
+        handleLocalForfeit();
+
+    }
 
 });
 
