@@ -2512,7 +2512,7 @@ function renderAuthState(){
         signedIn.style.display = "flex";
 
         const avatarEl = document.getElementById("authAvatar");
-        renderUserAvatar(avatarEl.parentElement, { photoURL: myProfile.photoURL, name: myProfile.displayName });
+        renderUserAvatar(avatarEl, { photoURL: myProfile.photoURL, name: myProfile.displayName });
 
         document.getElementById("authName").textContent =
             myProfile.displayName || currentUser.displayName || "Player";
@@ -2982,6 +2982,9 @@ async function performJoin(code, name){
         roomCode = code;
 
         myPlayer = "p2";
+
+
+        game = data;
 
 
         await db
