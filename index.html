@@ -1721,7 +1721,7 @@ Player 2
 
 
 <!-- ================= MATCH CHAT ================= -->
-<div class="chat-panel" id="chatPanel">
+<div class="chat-panel" id="chatPanel" style="display:none;">
     <div class="chat-header">
         💬 MATCH CHAT
         <span class="chat-unread" id="chatUnread"></span>
@@ -5504,6 +5504,11 @@ function goHome(){
 
     document.getElementById("gameScreen").style.display = "none";
 
+    const chatPanel = document.getElementById("chatPanel");
+    if(chatPanel){
+        chatPanel.style.display = "none";
+    }
+
     document.getElementById("result").textContent = "";
 
     document.getElementById("turnDisplay").textContent = "Waiting...";
@@ -6481,6 +6486,12 @@ function openGame(){
     const roomParent = document.getElementById("roomDisplay").parentElement;
     if(roomParent){
         roomParent.style.display =
+        gameMode === "online" ? "block" : "none";
+    }
+
+    const chatPanel = document.getElementById("chatPanel");
+    if(chatPanel){
+        chatPanel.style.display =
         gameMode === "online" ? "block" : "none";
     }
 
