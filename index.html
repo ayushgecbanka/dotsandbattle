@@ -5901,11 +5901,11 @@ function getAvailableMoves(){
 
     const moves = [];
 
-    for(let i = 0; i < n - 1; i++){
+    /* Horizontal: n rows × (n-1) columns = n * (n-1) lines. */
+
+    for(let i = 0; i < n; i++){
 
         for(let j = 0; j < n - 1; j++){
-
-            // horizontal
 
             const hKey = "h_" + i + "_" + j;
 
@@ -5915,7 +5915,15 @@ function getAvailableMoves(){
 
             }
 
-            // vertical
+        }
+
+    }
+
+    /* Vertical: (n-1) rows × n columns = n * (n-1) lines. */
+
+    for(let i = 0; i < n - 1; i++){
+
+        for(let j = 0; j < n; j++){
 
             const vKey = "v_" + i + "_" + j;
 
@@ -6593,75 +6601,80 @@ function getComputerMove(){
 
     if(moves.length === 0) return null;
 
+    /* HARD RULE FOR ALL DIFFICULTIES:
+       If any move completes a box, the computer MUST take it.
+       Completing a box grants another turn in Dots & Boxes, so a
+       box-taking move is always strictly better than a non-taking move.
+       This rule applies to Easy, Medium, and Hard. */
+
+    const taking = moves.filter(m => countCompletedBoxesForMove(m) > 0);
+
+    if(taking.length > 0){
+
+        taking.sort((a, b) => countCompletedBoxesForMove(b) - countCompletedBoxesForMove(a));
+
+        const best = taking[0];
+
+        console.log("AI MOVE", { difficulty: selectedDifficulty, move: best.key, boxesCompleted: countCompletedBoxesForMove(best), turn: game.turn, availableMoves: moves.length });
+
+        return best;
+
+    }
+
     if(selectedDifficulty === "easy"){
 
-        /* Easy: mostly random, occasionally takes an obvious box. */
+        /* Easy: random legal move when no box is available. */
 
-        if(Math.random() < 0.35){
+        const safe = moves.filter(m => !moveWouldGiveAwayBoxes(m));
 
-            const good = moves.filter(m => countCompletedBoxesForMove(m) > 0);
+        const pool = (safe.length > 0 && Math.random() < 0.4) ? safe : moves;
 
-            if(good.length > 0){
+        const pick = pool[Math.floor(Math.random() * pool.length)];
 
-                return good[Math.floor(Math.random() * good.length)];
+        console.log("AI MOVE", { difficulty: selectedDifficulty, move: pick.key, boxesCompleted: 0, turn: game.turn, availableMoves: moves.length });
 
-            }
-
-        }
-
-        if(Math.random() < 0.15){
-
-            const safe = moves.filter(m => !moveWouldGiveAwayBoxes(m));
-
-            if(safe.length > 0){
-
-                return safe[Math.floor(Math.random() * safe.length)];
-
-            }
-
-        }
-
-        return moves[Math.floor(Math.random() * moves.length)];
+        return pick;
 
     }
 
     else if(selectedDifficulty === "medium"){
 
-        /* Medium: greedy box-taker, avoid giving easy boxes. */
-
-        const taking = moves.filter(m => countCompletedBoxesForMove(m) > 0);
-
-        if(taking.length > 0){
-
-            taking.sort((a, b) => countCompletedBoxesForMove(b) - countCompletedBoxesForMove(a));
-
-            return taking[0];
-
-        }
+        /* Medium: avoid giving easy boxes; among safe moves, prefer ones
+           that minimize the opponent's follow-up boxes. */
 
         const nonGiving = moves.filter(m => !moveWouldGiveAwayBoxes(m));
 
-        if(nonGiving.length === 0){
+        let pick;
 
-            moves.sort((a, b) => evaluateMove(b) - evaluateMove(a));
+        if(nonGiving.length > 0){
 
-            return moves[0];
+            nonGiving.sort((a, b) => {
+
+                const fa = countFreeBoxesAfterMove(a);
+
+                const fb = countFreeBoxesAfterMove(b);
+
+                if(fa !== fb) return fb - fa;
+
+                return evaluateMove(b) - evaluateMove(a);
+
+            });
+
+            pick = nonGiving[0];
 
         }
 
-        nonGiving.sort((a, b) => {
+        else{
 
-            const fa = countFreeBoxesAfterMove(a);
+            moves.sort((a, b) => evaluateMove(b) - evaluateMove(a));
 
-            const fb = countFreeBoxesAfterMove(b);
+            pick = moves[0];
 
-            if(fa !== fb) return fb - fa;
+        }
 
-            return evaluateMove(b) - evaluateMove(a);
+        console.log("AI MOVE", { difficulty: selectedDifficulty, move: pick.key, boxesCompleted: 0, turn: game.turn, availableMoves: moves.length });
 
-        });
-
-        return nonGiving[0];
+        return pick;
 
     }
 
@@ -6671,11 +6684,19 @@ function getComputerMove(){
 
         const n = Number(game.size);
 
-        let budgetMs = n <= 3 ? 400 : (n === 4 ? 350 : (n === 5 ? 250 : 200));
+        let budgetMs = n <= 3 ? 400 : (n === 4 ? 350 : (n === 5 ? 250 : 200);
 
         const deadline = Date.now() + budgetMs;
 
-        return pickHardMove(moves, deadline);
+        const pick = pickHardMove(moves, deadline);
+
+        if(pick){
+
+            console.log("AI MOVE", { difficulty: selectedDifficulty, move: pick.key, boxesCompleted: countCompletedBoxesForMove(pick), turn: game.turn, availableMoves: moves.length });
+
+        }
+
+        return pick;
 
     }
 
@@ -6753,6 +6774,14 @@ function applyComputerMove(){
                 chainNext();
 
                 return;
+
+            }
+
+            if(game){
+
+                const boxesCompleted = (move && game.boxes) ? Object.keys(game.boxes).filter(b => game.boxes[b] === "p2").length : 0;
+
+                console.log("AI AFTER MOVE", { boxesCompleted, turn: game.turn, computerThinking, finished: game.finished });
 
             }
 
