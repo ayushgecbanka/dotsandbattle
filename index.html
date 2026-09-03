@@ -1950,6 +1950,9 @@ let disconnectTimer = null;
 
 let resultHomeTimer = null;
 
+let roomPresenceRef = null;
+let roomRef = null;
+
 const RESULT_HOME_DELAY = 3000;
 
 const DISCONNECT_GRACE_PERIOD = 12000;
@@ -3019,9 +3022,39 @@ async function performJoin(code, name){
 }
 
 
+function cleanupRoomListeners(){
+
+    if(roomRef){
+        roomRef.off();
+        roomRef = null;
+    }
+
+    if(roomPresenceRef){
+        roomPresenceRef.off();
+        roomPresenceRef = null;
+    }
+
+    if(disconnectTimer){
+        clearTimeout(disconnectTimer);
+        disconnectTimer = null;
+    }
+
+}
+
+
 /* ================= LISTEN ================= */
 
 function listenRoom(){
+
+    if(roomRef){
+        roomRef.off();
+        roomRef = null;
+    }
+
+    if(roomPresenceRef){
+        roomPresenceRef.off();
+        roomPresenceRef = null;
+    }
 
     if(disconnectTimer){
 
@@ -3031,9 +3064,9 @@ function listenRoom(){
 
     }
 
-    db
-    .ref("rooms/"+roomCode)
-    .on("value", snapshot => {
+    roomRef = db.ref("rooms/"+roomCode);
+
+    roomRef.on("value", snapshot => {
 
         if(!snapshot.exists()){
 
@@ -3075,9 +3108,14 @@ function listenRoom(){
 
             if(opp && opp.uid){
 
-                const presRef = db.ref("presence/" + opp.uid);
+                if(roomPresenceRef){
+                    roomPresenceRef.off();
+                    roomPresenceRef = null;
+                }
 
-                presRef.on("value", function(snap){
+                roomPresenceRef = db.ref("presence/" + opp.uid);
+
+                roomPresenceRef.on("value", function(snap){
 
                     const p = snap.val() || {};
 
@@ -3165,6 +3203,7 @@ function startDisconnectGracePeriod(opponentSlot){
 
 function renderGame(){
 
+    console.log("[DEBUG] renderGame entered", {gameExists:!!game, gameSize:game?game.size:null});
     try{
 
     if(!game){
@@ -3286,6 +3325,7 @@ function renderGame(){
 
 function drawBoard(){
 
+    console.log("[DEBUG] drawBoard entered", {gameExists:!!game, gameSize:game?game.size:null, boardEl:!!document.getElementById("gameBoard")});
     try{
 
     if(!game) return;
@@ -3742,6 +3782,16 @@ async function makeOnlineMove(key){
 
         return current;
 
+    }).then(function(res){
+        if(res && res.committed){
+            renderGame();
+            if(game && game.finished && !playerLeft){
+                handleGameEnd();
+            }
+        }
+    }).catch(function(error){
+        console.error("[makeOnlineMove error]", error);
+        showNotification("❌ Move failed: " + (error.message || "Network error"));
     });
 
 }
@@ -4166,19 +4216,6 @@ function loadRecentStickers(){
     catch(e){
         return [];
     }
-}
-
-
-function saveRecentSticker(s){
-    try{
-        const arr = loadRecentStickers().filter(function(x){
-            return x !== s;
-        });
-        arr.unshift(s);
-        while(arr.length > 10) arr.pop();
-        localStorage.setItem("dotsBattleRecentStickers", JSON.stringify(arr));
-    }
-    catch(e){}
 }
 
 
@@ -5354,18 +5391,6 @@ function initializeFriends(){
 }
 
 
-/* ================= BACK ================= */
-
-document
-.getElementById("backHome")
-.addEventListener("click",function(){
-
-    cleanupChatListener();
-    location.reload();
-
-});
-
-
 /* ================= RESIZE ================= */
 
 window.addEventListener(
@@ -5421,6 +5446,7 @@ function setMode(mode){
 function goHome(){
 
     cleanupChatListener();
+    cleanupRoomListeners();
 
     if(computerTimer){
 
@@ -5728,6 +5754,8 @@ document.getElementById("backFromOnline").addEventListener("click", goBack);
 
 document.getElementById("startComputer").addEventListener("click", () => {
 
+    try{
+    console.log("[DEBUG] startComputer clicked");
     const name =
     document.getElementById("computerName").value.trim() ||
     (myProfile && myProfile.displayName) ||
@@ -5782,9 +5810,15 @@ document.getElementById("startComputer").addEventListener("click", () => {
 
     };
 
+    console.log("[DEBUG] startComputer game before openGame", JSON.stringify({mode:gameMode, size:game.size, hasPlayers:!!game.players, hasScores:!!game.scores}));
     openGame();
 
-    drawBoard();
+    }
+    catch(error){
+        console.error("[startComputer FATAL]", error);
+        const resultEl = document.getElementById("result");
+        if(resultEl) resultEl.textContent = "⚠️ Start error: " + (error.message || error);
+    }
 
 });
 
@@ -5848,8 +5882,6 @@ document.getElementById("startOffline").addEventListener("click", () => {
     };
 
     openGame();
-
-    drawBoard();
 
 });
 
@@ -6427,8 +6459,6 @@ function restartGame(){
 
     renderGame();
 
-    drawBoard();
-
 }
 
 
@@ -6436,6 +6466,7 @@ function restartGame(){
 
 function openGame(){
 
+    console.log("[DEBUG] openGame entered", {gameMode, gameExists:!!game, gameSize:game?game.size:null});
     try{
 
     resultRecorded = false;
