@@ -3274,6 +3274,7 @@ function renderGame(){
     }
     catch(error){
         console.error("[renderGame error]", error);
+        throw error;
     }
 
 }
@@ -3470,6 +3471,7 @@ function drawBoard(){
     }
     catch(error){
         console.error("[drawBoard error]", error);
+        throw error;
     }
 
 }
@@ -3519,19 +3521,6 @@ function createLine(
 
         line.classList.add(
             game.lines[key]
-        );
-
-    }
-
-    else{
-
-        line.addEventListener(
-            "click",
-            function(){
-
-                makeMove(key);
-
-            }
         );
 
     }
@@ -6701,15 +6690,25 @@ document.getElementById("gameBoard").addEventListener("click", function(e){
 
     if(!key || game.lines[key]) return;
 
-    const success = makeMove(key, game.turn);
+    if(gameMode === "online"){
 
-    if(success){
+        makeOnlineMove(key);
 
-        renderGame();
+    }
 
-        if(game.finished){
+    else{
 
-            handleGameEnd();
+        const success = makeLocalMove(key, game.turn);
+
+        if(success){
+
+            renderGame();
+
+            if(game.finished){
+
+                handleGameEnd();
+
+            }
 
         }
 
