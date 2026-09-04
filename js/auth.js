@@ -213,6 +213,115 @@ async function isUsernameTaken(username, exceptUid){
 }
 
 
+function validateUsername(username){
+
+    username = (username || "").trim();
+
+    if(username.length < 3 || username.length > 20){
+        return "Username must be 3-20 characters.";
+    }
+
+    if(!/^[a-z0-9_]+$/.test(username)){
+        return "Only letters, numbers and underscore allowed.";
+    }
+
+    return "";
+
+}
+
+
+async function saveProfile(){
+
+    if(!currentUser) return;
+
+    const newUsername = (document.getElementById("editUsername").value || "").trim();
+    const newName = (document.getElementById("editDisplayName").value || "").trim();
+    const newBio = (document.getElementById("editBio").value || "").trim();
+
+    const err = validateUsername(newUsername);
+    if(err){
+        document.getElementById("modalError").textContent = err;
+        return;
+    }
+
+    if(!newName){
+        document.getElementById("modalError").textContent = "Display name cannot be empty.";
+        return;
+    }
+
+    if(await isUsernameTaken(newUsername, currentUser.uid)){
+        document.getElementById("modalError").textContent = "Username already taken.";
+        return;
+    }
+
+    const updates = {
+        username: newUsername,
+        displayName: newName,
+        bio: newBio
+    };
+
+    const previousUsername = myProfile.username;
+
+    try{
+        await db.ref("players/" + currentUser.uid).update(updates);
+        Object.assign(myProfile, updates);
+        syncPublicProfile(previousUsername);
+        document.getElementById("modalError").textContent = "";
+        showProfileModal();
+    }
+    catch(error){
+        console.error(error);
+        document.getElementById("modalError").textContent = "❌ Save failed.";
+    }
+
+}
+
+
+function loadProfile(){
+    return myProfile;
+}
+
+
+async function updateStats(uid, result, boxes){
+
+    const ref = db.ref("players/" + uid + "/stats");
+
+    await ref.transaction(function(s){
+
+        s = s || {
+            totalGames: 0,
+            wins: 0,
+            losses: 0,
+            draws: 0,
+            totalBoxes: 0,
+            currentWinStreak: 0,
+            bestWinStreak: 0
+        };
+
+        s.totalGames = (s.totalGames || 0) + 1;
+        s.totalBoxes = (s.totalBoxes || 0) + (boxes || 0);
+
+        if(result === "win"){
+            s.wins = (s.wins || 0) + 1;
+            s.currentWinStreak = (s.currentWinStreak || 0) + 1;
+            s.bestWinStreak = Math.max((s.bestWinStreak || 0), s.currentWinStreak);
+        }
+        else if(result === "loss"){
+            s.losses = (s.losses || 0) + 1;
+            s.currentWinStreak = 0;
+        }
+        else{
+            s.draws = (s.draws || 0) + 1;
+            s.currentWinStreak = 0;
+        }
+
+        return s;
+
+    });
+
+}
+
+
 /* ================= PLAYER INFO HELPERS ================= */
 
 function getPlayerInfo(slot){
@@ -232,5 +341,126 @@ function getPlayerInfo(slot){
         avatarId: p.avatarId || ""
     };
 
+}
+
+
+function buildPlayerObject(nameFallback){
+
+    if(currentUser && myProfile){
+        return {
+            uid: currentUser.uid,
+            name: myProfile.displayName,
+            username: myProfile.username,
+            photoURL: myProfile.photoURL,
+            avatarType: myProfile.avatarType || "google",
+            avatarId: myProfile.avatarId || ""
+        };
+    }
+
+    return { name: nameFallback };
+
+}
+
+
+/* ================= PROFILE UI ================= */
+
+function renderAuthState(){
+
+    const signedOut = document.getElementById("authSignedOut");
+    const signedIn = document.getElementById("authSignedIn");
+
+    if(currentUser && myProfile){
+
+        signedOut.style.display = "none";
+        signedIn.style.display = "flex";
+
+        const avatarEl = document.getElementById("authAvatar");
+        renderUserAvatar(avatarEl, { photoURL: myProfile.photoURL, name: myProfile.displayName });
+
+        document.getElementById("authName").textContent =
+            myProfile.displayName || currentUser.displayName || "Player";
+
+        document.getElementById("authUsername").textContent =
+            "@" + (myProfile.username || "");
+
+    }
+    else{
+        signedOut.style.display = "block";
+        signedIn.style.display = "none";
+    }
+
+}
+
+
+function renderUserProfile(){
+    renderAuthState();
+}
+
+
+function showProfileModal(){
+
+    if(!currentUser || !myProfile){
+        return;
+    }
+
+    const p = myProfile;
+
+    const photo = document.getElementById("modalPhoto");
+    const avatar = getUserAvatar();
+    if(avatar.avatarType === "cartoon" && avatar.avatarId){
+        const found = getAvatarById(avatar.avatarId);
+        if(found){
+            photo.src = found.url;
+            photo.style.display = "";
+        }
+        else{
+            photo.style.display = "none";
+        }
+    }
+    else if(p.photoURL){
+        photo.src = p.photoURL;
+        photo.style.display = "";
+    }
+    else{
+        photo.style.display = "none";
+    }
+
+    document.getElementById("modalName").textContent = p.displayName || "";
+    document.getElementById("modalUsername").textContent = "@" + (p.username || "");
+
+    const s = p.stats || {};
+    const games = s.totalGames || 0;
+    const wins = s.wins || 0;
+    const losses = s.losses || 0;
+    const draws = s.draws || 0;
+    const rate = games ? Math.round((wins / games) * 100) : 0;
+
+    document.getElementById("statGames").textContent = games;
+    document.getElementById("statWins").textContent = wins;
+    document.getElementById("statLosses").textContent = losses;
+    document.getElementById("statDraws").textContent = draws;
+    document.getElementById("statRate").textContent = rate + "%";
+    document.getElementById("statBoxes").textContent = s.totalBoxes || 0;
+    document.getElementById("statStreak").textContent = s.currentWinStreak || 0;
+    document.getElementById("statBest").textContent = s.bestWinStreak || 0;
+
+    document.getElementById("editUsername").value = p.username || "";
+    document.getElementById("editDisplayName").value = p.displayName || "";
+    document.getElementById("editBio").value = p.bio || "";
+
+    document.getElementById("editFields").style.display = "none";
+    document.getElementById("modalError").textContent = "";
+
+    const editBtn = document.getElementById("editProfileBtn");
+    if(editBtn) editBtn.textContent = "✏️ Edit Profile";
+
+    document.getElementById("profileModal").classList.add("open");
+
+}
+
+
+function closeProfileModal(){
+    document.getElementById("profileModal").classList.remove("open");
+    document.getElementById("editFields").style.display = "none";
 }
 

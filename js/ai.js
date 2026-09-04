@@ -320,20 +320,62 @@ function getAdjacentBoxes(move){
 
 function moveWouldGiveAwayBoxes(move){
 
+    /* Simulate the move on a copy of the game state, then check if any
+       adjacent box has exactly 1 missing side AFTER the move.
+       A box with 1 missing side after the move means the opponent
+       can complete it on their next turn. */
+
+    if(!game || !game.lines) return false;
+
+    const saved = game.lines[move.key];
+
+    game.lines[move.key] = (game.lines[move.key] || "simulated");
+
     const adj = getAdjacentBoxes(move);
+
+    let gives = false;
 
     for(const b of adj){
 
-        if(countMissingSides(b) === 1) return true;
+        if(game.boxes && game.boxes[b]) continue;
+
+        if(countMissingSides(b) === 1){
+
+            gives = true;
+
+            break;
+
+        }
 
     }
 
-    return false;
+    if(saved === undefined){
+
+        delete game.lines[move.key];
+
+    }
+
+    else{
+
+        game.lines[move.key] = saved;
+
+    }
+
+    return gives;
 
 }
 
 
 function countFreeBoxesAfterMove(move){
+
+    /* Simulate the move, then count how many adjacent boxes have
+       exactly 1 missing side after the move (opponent's free boxes). */
+
+    if(!game || !game.lines) return 0;
+
+    const saved = game.lines[move.key];
+
+    game.lines[move.key] = (game.lines[move.key] || "simulated");
 
     const adj = getAdjacentBoxes(move);
 
@@ -341,7 +383,21 @@ function countFreeBoxesAfterMove(move){
 
     for(const b of adj){
 
+        if(game.boxes && game.boxes[b]) continue;
+
         if(countMissingSides(b) === 1) count++;
+
+    }
+
+    if(saved === undefined){
+
+        delete game.lines[move.key];
+
+    }
+
+    else{
+
+        game.lines[move.key] = saved;
 
     }
 
@@ -369,6 +425,52 @@ function getAllBoxKeys(){
     }
 
     return keys;
+
+}
+
+
+/* Simulate a chain capture from a given state and player.
+   Returns the total number of boxes the player would capture
+   by greedily taking all available boxes until none remain.
+   This is used to evaluate forced-capture situations. */
+
+function simulateChainCapture(state, player){
+
+    let total = 0;
+
+    const maxIter = (state.size) * (state.size) + 1;
+
+    let iter = 0;
+
+    while(iter++ < maxIter){
+
+        const moves = getAvailableMovesForState(state);
+
+        let found = false;
+
+        for(const m of moves){
+
+            const sim = simulateMove(state, m, player);
+
+            if(sim.lastGained > 0){
+
+                total += sim.lastGained;
+
+                state = sim;
+
+                found = true;
+
+                break;
+
+            }
+
+        }
+
+        if(!found) break;
+
+    }
+
+    return total;
 
 }
 
@@ -535,15 +637,59 @@ function evaluateState(state, aiPlayer, depth){
 
     const opp = aiPlayer === "p2" ? "p1" : "p2";
 
+    /* Primary: score difference. Each box is worth 100 points. */
+
     let score = (state.scores[aiPlayer] - state.scores[opp]) * 100;
+
+    /* Secondary: count how many 3-sided boxes exist for each player.
+       A 3-sided box is a free capture. The player whose turn it is can
+       take it immediately. We estimate who would benefit. */
 
     const moves = getAvailableMovesForState(state);
 
+    let myFree = 0;
+
+    let oppFree = 0;
+
+    let myDanger = 0;
+
+    let oppDanger = 0;
+
     for(const m of moves){
 
-        if(moveWouldGiveAwayForState(state, m)) score -= 15;
+        const sim = simulateMove(state, m, aiPlayer);
+
+        if(sim.lastGained > 0){
+
+            myFree++;
+
+        }
+
+        if(moveWouldGiveAwayForState(state, m)){
+
+            /* If a move gives away a box, the opponent can take it.
+               Count it as opponent's free box. */
+
+            oppDanger++;
+
+        }
 
     }
+
+    /* Estimate: simulate the current player's forced chain capture
+       to see how many boxes they would take in a row. */
+
+    const myChain = simulateChainCapture(JSON.parse(JSON.stringify(state)), aiPlayer);
+
+    score += myChain * 50;
+
+    /* Penalize moves that give the opponent free boxes. */
+
+    score -= oppDanger * 40;
+
+    /* Penalize giving the opponent a long chain. */
+
+    score -= myDanger * 10;
 
     return score - depth;
 
@@ -572,39 +718,121 @@ function alphaBeta(state, aiPlayer, depth, alpha, beta, maximizing, deadline){
 
     }
 
-    const taking = moves.filter(m => {
+    const currentPlayer = maximizing ? aiPlayer : (aiPlayer === "p2" ? "p1" : "p2");
 
-        const sim = simulateMove(state, m, maximizing ? aiPlayer : (aiPlayer === "p2" ? "p1" : "p2"));
+    /* Step 1: Check for immediate box captures (chain capture). */
 
-        return sim.lastGained > 0;
+    const taking = [];
 
-    });
+    for(const m of moves){
 
-    if(taking.length > 0){
+        const sim = simulateMove(state, m, currentPlayer);
 
-        let best = -Infinity;
+        if(sim.lastGained > 0){
 
-        for(const m of taking){
-
-            const next = simulateMove(state, m, maximizing ? aiPlayer : (aiPlayer === "p2" ? "p1" : "p2"));
-
-            const v = alphaBeta(next, aiPlayer, depth - 1, alpha, beta, maximizing, deadline);
-
-            if(v > best) best = v;
-
-            if(best > alpha) alpha = best;
-
-            if(beta <= alpha) break;
+            taking.push({ move: m, gain: sim.lastGained });
 
         }
 
-        return best;
+    }
+
+    if(taking.length > 0){
+
+        /* If the current player can take boxes, they MUST keep taking
+           until none remain. We evaluate the full chain. */
+
+        taking.sort((a, b) => b.gain - a.gain);
+
+        if(maximizing){
+
+            let best = -Infinity;
+
+            for(const t of taking){
+
+                const next = simulateMove(state, t.move, currentPlayer);
+
+                /* After capturing, the same player goes again. The
+                   recursion handles the chain by re-checking taking. */
+
+                const chainGain = next.lastGained + estimateChainGain(next, currentPlayer, deadline);
+
+                const v = chainGain * 100 + alphaBeta(next, aiPlayer, depth - 1, alpha, beta, true, deadline);
+
+                if(v > best) best = v;
+
+                if(best > alpha) alpha = best;
+
+                if(beta <= alpha) break;
+
+            }
+
+            return best;
+
+        }
+
+        else{
+
+            let best = Infinity;
+
+            for(const t of taking){
+
+                const next = simulateMove(state, t.move, currentPlayer);
+
+                const chainGain = next.lastGained + estimateChainGain(next, currentPlayer, deadline);
+
+                const v = -(chainGain * 100) + alphaBeta(next, aiPlayer, depth - 1, alpha, beta, false, deadline);
+
+                if(v < best) best = v;
+
+                if(best < beta) beta = best;
+
+                if(beta <= alpha) break;
+
+            }
+
+            return best;
+
+        }
 
     }
 
-    const nonGiving = moves.filter(m => !moveWouldGiveAwayForState(state, m));
+    /* Step 2: No immediate capture. Prefer non-giving moves. */
 
-    const candidates = nonGiving.length > 0 ? nonGiving : moves;
+    const nonGiving = [];
+
+    const giving = [];
+
+    for(const m of moves){
+
+        if(moveWouldGiveAwayForState(state, m)){
+
+            giving.push(m);
+
+        }
+
+        else{
+
+            nonGiving.push(m);
+
+        }
+
+    }
+
+    const candidates = nonGiving.length > 0 ? nonGiving : giving;
+
+    if(candidates.length === 0) return evaluateState(state, aiPlayer, depth);
+
+    /* Move ordering: prefer moves that open fewer new give-aways. */
+
+    candidates.sort((a, b) => {
+
+        const ga = countFutureGiveAways(state, a, currentPlayer);
+
+        const gb = countFutureGiveAways(state, b, currentPlayer);
+
+        return ga - gb;
+
+    });
 
     if(maximizing){
 
@@ -612,7 +840,7 @@ function alphaBeta(state, aiPlayer, depth, alpha, beta, maximizing, deadline){
 
         for(const m of candidates){
 
-            const next = simulateMove(state, m, aiPlayer);
+            const next = simulateMove(state, m, currentPlayer);
 
             const v = alphaBeta(next, aiPlayer, depth - 1, alpha, beta, false, deadline);
 
@@ -632,11 +860,9 @@ function alphaBeta(state, aiPlayer, depth, alpha, beta, maximizing, deadline){
 
         let best = Infinity;
 
-        const opp = aiPlayer === "p2" ? "p1" : "p2";
-
         for(const m of candidates){
 
-            const next = simulateMove(state, m, opp);
+            const next = simulateMove(state, m, currentPlayer);
 
             const v = alphaBeta(next, aiPlayer, depth - 1, alpha, beta, true, deadline);
 
@@ -655,17 +881,90 @@ function alphaBeta(state, aiPlayer, depth, alpha, beta, maximizing, deadline){
 }
 
 
+/* Estimate how many additional boxes the current player would capture
+   in a greedy chain from this state. Limited to avoid time blowup. */
+
+function estimateChainGain(state, player, deadline){
+
+    if(deadline && Date.now() > deadline) return 0;
+
+    let total = 0;
+
+    let s = state;
+
+    const maxIter = 20;
+
+    for(let i = 0; i < maxIter; i++){
+
+        if(deadline && Date.now() > deadline) break;
+
+        const moves = getAvailableMovesForState(s);
+
+        let found = false;
+
+        for(const m of moves){
+
+            const sim = simulateMove(s, m, player);
+
+            if(sim.lastGained > 0){
+
+                total += sim.lastGained;
+
+                s = sim;
+
+                found = true;
+
+                break;
+
+            }
+
+        }
+
+        if(!found) break;
+
+    }
+
+    return total;
+
+}
+
+
+/* Count how many new give-away moves would exist after this move. */
+
+function countFutureGiveAways(state, move, player){
+
+    const next = simulateMove(state, move, player);
+
+    const opp = player === "p2" ? "p1" : "p2";
+
+    const nextMoves = getAvailableMovesForState(next);
+
+    let count = 0;
+
+    for(const m of nextMoves){
+
+        if(moveWouldGiveAwayForState(next, m)) count++;
+
+    }
+
+    return count;
+
+}
+
+
 function pickHardMove(moves, deadline){
 
     const n = Number(game.size);
 
-    const totalLines = 2 * n * (n - 1);
-
     if(moves.length === 0) return null;
+
+    /* Step 1: Always take immediate boxes first. */
 
     const taking = moves.filter(m => countCompletedBoxesForMove(m) > 0);
 
     if(taking.length > 0){
+
+        taking.sort((a, b) => countCompletedBoxesForMove(b) - countCompletedBoxesForMove(a));
 
         let bestMove = taking[0];
 
@@ -691,31 +990,70 @@ function pickHardMove(moves, deadline){
 
     }
 
+    /* Step 2: No immediate box. Try non-giving moves first with deeper search. */
+
     const nonGiving = moves.filter(m => !moveWouldGiveAwayBoxes(m));
 
-    const candidates = nonGiving.length > 0 ? nonGiving : moves;
+    if(nonGiving.length > 0){
 
-    let bestMove = candidates[0];
+        /* Order non-giving moves by how few new give-aways they create. */
 
-    let bestScore = -Infinity;
+        nonGiving.sort((a, b) => {
 
-    for(const m of candidates){
+            const sa = simulateMove(game, a, "p2");
 
-        const sim = simulateMove(game, m, "p2");
+            const sb = simulateMove(game, b, "p2");
 
-        const v = alphaBeta(sim, "p2", 2, -Infinity, Infinity, true, deadline);
+            const ga = countFutureGiveAways(game, a, "p2");
 
-        if(v > bestScore){
+            const gb = countFutureGiveAways(game, b, "p2");
 
-            bestScore = v;
+            if(ga !== gb) return ga - gb;
 
-            bestMove = m;
+            return evaluateState(sb, "p2", 0) - evaluateState(sa, "p2", 0);
+
+        });
+
+        let bestMove = nonGiving[0];
+
+        let bestScore = -Infinity;
+
+        for(const m of nonGiving){
+
+            const sim = simulateMove(game, m, "p2");
+
+            const v = alphaBeta(sim, "p2", 3, -Infinity, Infinity, true, deadline);
+
+            if(v > bestScore){
+
+                bestScore = v;
+
+                bestMove = m;
+
+            }
 
         }
 
+        return bestMove;
+
     }
 
-    return bestMove;
+    /* Step 3: All moves give away. Pick the one that gives the opponent
+       the fewest boxes. */
+
+    const withCost = moves.map(m => {
+
+        const sim = simulateMove(game, m, "p2");
+
+        const oppChain = estimateChainGain(JSON.parse(JSON.stringify(sim)), "p1", deadline);
+
+        return { move: m, oppChain: oppChain };
+
+    });
+
+    withCost.sort((a, b) => a.oppChain - b.oppChain);
+
+    return withCost[0].move;
 
 }
 
@@ -770,42 +1108,59 @@ function getComputerMove(){
 
     else if(selectedDifficulty === "medium"){
 
-        /* Medium: avoid giving easy boxes; among safe moves, prefer ones
-           that minimize the opponent's follow-up boxes. */
+        /* Medium: shallow alpha-beta search. Prefers non-giving moves. */
 
         const nonGiving = moves.filter(m => !moveWouldGiveAwayBoxes(m));
 
-        let pick;
+        const candidatePool = nonGiving.length > 0 ? nonGiving : moves;
 
-        if(nonGiving.length > 0){
+        /* Shallow search (depth 1-2) with a small time budget. */
 
-            nonGiving.sort((a, b) => {
+        const deadline = Date.now() + 80;
 
-                const fa = countFreeBoxesAfterMove(a);
+        let bestMove = candidatePool[0];
 
-                const fb = countFreeBoxesAfterMove(b);
+        let bestScore = -Infinity;
 
-                if(fa !== fb) return fb - fa;
+        for(const m of candidatePool){
 
-                return evaluateMove(b) - evaluateMove(a);
+            const sim = simulateMove(game, m, "p2");
+
+            const v = alphaBeta(sim, "p2", 2, -Infinity, Infinity, true, deadline);
+
+            if(v > bestScore){
+
+                bestScore = v;
+
+                bestMove = m;
+
+            }
+
+        }
+
+        /* If all moves give away, pick the one with smallest opponent chain. */
+
+        if(nonGiving.length === 0){
+
+            const withCost = moves.map(m => {
+
+                const sim = simulateMove(game, m, "p2");
+
+                const oppChain = estimateChainGain(JSON.parse(JSON.stringify(sim)), "p1", deadline);
+
+                return { move: m, oppChain: oppChain };
 
             });
 
-            pick = nonGiving[0];
+            withCost.sort((a, b) => a.oppChain - b.oppChain);
+
+            bestMove = withCost[0].move;
 
         }
 
-        else{
+        console.log("AI MOVE", { difficulty: selectedDifficulty, move: bestMove.key, boxesCompleted: countCompletedBoxesForMove(bestMove), turn: game.turn, availableMoves: moves.length });
 
-            moves.sort((a, b) => evaluateMove(b) - evaluateMove(a));
-
-            pick = moves[0];
-
-        }
-
-        console.log("AI MOVE", { difficulty: selectedDifficulty, move: pick.key, boxesCompleted: 0, turn: game.turn, availableMoves: moves.length });
-
-        return pick;
+        return bestMove;
 
     }
 
