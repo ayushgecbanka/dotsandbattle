@@ -401,6 +401,17 @@ input:focus{
     color:#ffd45c;
 }
 
+.result-countdown{
+    text-align:center;
+    margin-top:8px;
+
+    font-size:16px;
+    font-weight:normal;
+
+    color:#9ab0d0;
+    min-height:20px;
+}
+
 .back-btn{
     display:block;
     margin:18px auto;

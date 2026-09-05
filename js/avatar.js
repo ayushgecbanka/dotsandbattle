@@ -65,11 +65,38 @@ function renderUserAvatar(wrapEl, user){
     if(!src && user && user.photoURL) src = user.photoURL;
     if(!src && myProfile && myProfile.photoURL) src = myProfile.photoURL;
 
+    /* Always have a DiceBear fallback URL generated from the user's UID
+       or display name. This guarantees a working image even if:
+       - Google photoURL is missing, blocked, or returns a CORS error
+       - The DiceBear cartoon URL fails to load
+       - The user has no avatar configured
+
+       If the primary src is empty, use the DiceBear fallback directly
+       as the primary source. This prevents the "broken image" icon
+       with alt text from ever appearing. */
+
+    const fallbackSeed = (currentUser && currentUser.uid) ?
+        currentUser.uid :
+        ((user && user.name) ? user.name : (myProfile && myProfile.displayName) ? myProfile.displayName : "player");
+
+    const fallbackUrl = "https://api.dicebear.com/7.x/adventurer/svg?seed=" + encodeURIComponent(fallbackSeed);
+
+    if(!src) src = fallbackUrl;
+
     if(src){
         const img = document.createElement("img");
         img.src = src;
         img.className = "avatar";
         img.alt = "";
+        img.onerror = function(){
+            /* If the primary image fails to load (e.g., Google photoURL
+               blocked, CORS issue, or invalid URL), fall back to the
+               DiceBear avatar. This prevents the broken-image icon. */
+
+            if(this.src === fallbackUrl) return;
+            this.onerror = null;
+            this.src = fallbackUrl;
+        };
         wrapEl.appendChild(img);
     }
     else{

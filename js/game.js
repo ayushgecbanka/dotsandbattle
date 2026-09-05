@@ -38,6 +38,7 @@ function setMode(mode){
 
 function goHome(){
 
+    cancelResultCountdown();
     cleanupChatListener();
     cleanupRoomListeners();
 
@@ -111,6 +112,8 @@ function goHome(){
 
 
 function goBack(){
+
+    cancelResultCountdown();
 
     if(gameMode === "computer" || gameMode === "offline"){
 
@@ -550,10 +553,14 @@ function handleGameEnd(){
 
     }
 
+    scheduleResultCountdown();
+
 }
 
 
 function restartGame(){
+
+    cancelResultCountdown();
 
     if(!game) return;
 
@@ -777,7 +784,7 @@ function showWinner(){
 
         recordResultIdempotent(result);
 
-        scheduleAutoHome();
+        scheduleResultCountdown();
 
     }
 

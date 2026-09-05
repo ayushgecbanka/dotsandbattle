@@ -33,6 +33,8 @@ async function createRoomCore(nameOverride){
 
     if(!firebaseLoaded) return false;
 
+    gameMode = "online";
+
     roomCode =
     Math.random()
     .toString(36)
@@ -171,15 +173,16 @@ async function performJoin(code, name){
         snapshot.val();
 
 
-        if(data.players.p2){
+    if(data.players.p2){
 
-            setStatus("❌ Room already full hai.");
-            return false;
+        setStatus("❌ Room already full hai.");
+        return false;
 
-        }
+    }
 
+    gameMode = "online";
 
-        roomCode = code;
+    roomCode = code;
 
         myPlayer = "p2";
 
@@ -432,11 +435,23 @@ async function makeOnlineMove(key){
     db.ref("rooms/"+roomCode);
 
 
+    const myUid = currentUser ? currentUser.uid : null;
+
     await roomRef.transaction(
     function(current){
 
         if(!current) return current;
 
+        /* SERVER-SIDE PLAYER IDENTITY CHECK:
+           Verify the authenticated user is actually a player in this room. */
+
+        if(!myUid || !current.players ||
+           ((!current.players.p1 || current.players.p1.uid !== myUid) &&
+            (!current.players.p2 || current.players.p2.uid !== myUid))){
+
+            return;
+
+        }
 
         /* SERVER-SIDE TURN CHECK */
 
@@ -445,7 +460,6 @@ async function makeOnlineMove(key){
             return;
 
         }
-
 
         if(current.finished){
 
@@ -660,7 +674,7 @@ async function handleLocalForfeit(){
 
     recordResultIdempotent("loss");
 
-    scheduleAutoHome();
+    scheduleResultCountdown();
 
 }
 
@@ -742,27 +756,11 @@ function handleForfeitResult(roomData){
 
     }
 
-    scheduleAutoHome();
+    scheduleResultCountdown();
 
 }
 
 
-function scheduleAutoHome(){
-
-    if(resultHomeTimer){
-
-        clearTimeout(resultHomeTimer);
-
-    }
-
-    resultHomeTimer = setTimeout(function(){
-
-        resultHomeTimer = null;
-
-        goHome();
-
-    }, RESULT_HOME_DELAY);
-
-}
 
 
+/* ================= MAKE MOVE ================= */

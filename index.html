@@ -208,7 +208,14 @@ FIREBASE SECURITY RULES (apply in Firebase Console > Realtime Database > Rules):
 <div id="onlineSetup" class="setup-screen" style="display:none;">
     <div class="card online">
         <h2>🌐 PLAY ONLINE</h2>
-        <p>Create a room and send the code to your friend.</p>
+        <p>Choose board size, then create a room or join one.</p>
+        <label class="setup-label">Board Size</label>
+        <div class="board-options" id="onlineBoardOptions">
+            <button type="button" class="size-btn" data-size="3">3 × 3<small>4 Boxes</small></button>
+            <button type="button" class="size-btn selected" data-size="4">4 × 4<small>9 Boxes</small></button>
+            <button type="button" class="size-btn" data-size="5">5 × 5<small>16 Boxes</small></button>
+            <button type="button" class="size-btn" data-size="6">6 × 6<small>25 Boxes</small></button>
+        </div>
         <div class="online-row">
             <button type="button" class="btn create-btn" id="createRoom">CREATE ROOM</button>
             <input id="roomInput" type="text" placeholder="Enter room code">
@@ -292,6 +299,11 @@ Player 2
 <div
     class="result"
     id="result"
+></div>
+
+<div
+    class="result-countdown"
+    id="resultCountdown"
 ></div>
 
 

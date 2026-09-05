@@ -49,13 +49,88 @@ let autoHomeTimer = null;
 let disconnectTimer = null;
 
 let resultHomeTimer = null;
+let resultCountdownInterval = null;
+let resultCountdownSeconds = 0;
 
 let roomPresenceRef = null;
 let roomRef = null;
 
-const RESULT_HOME_DELAY = 3000;
+const RESULT_HOME_DELAY = 20000;
 
 const DISCONNECT_GRACE_PERIOD = 12000;
+
+
+/* ================= RESULT COUNTDOWN ================= */
+
+function scheduleResultCountdown(){
+
+    cancelResultCountdown();
+
+    resultCountdownSeconds = Math.ceil(RESULT_HOME_DELAY / 1000);
+
+    updateCountdownDisplay();
+
+    resultCountdownInterval = setInterval(function(){
+
+        resultCountdownSeconds--;
+
+        if(resultCountdownSeconds <= 0){
+
+            cancelResultCountdown();
+
+            goHome();
+
+            return;
+
+        }
+
+        updateCountdownDisplay();
+
+    }, 1000);
+
+    resultHomeTimer = setTimeout(function(){
+
+        resultHomeTimer = null;
+
+        cancelResultCountdown();
+
+        goHome();
+
+    }, RESULT_HOME_DELAY);
+
+}
+
+
+function cancelResultCountdown(){
+
+    if(resultCountdownInterval){
+
+        clearInterval(resultCountdownInterval);
+        resultCountdownInterval = null;
+
+    }
+
+    if(resultHomeTimer){
+
+        clearTimeout(resultHomeTimer);
+        resultHomeTimer = null;
+
+    }
+
+    const el = document.getElementById("resultCountdown");
+    if(el) el.textContent = "";
+
+}
+
+
+function updateCountdownDisplay(){
+
+    const el = document.getElementById("resultCountdown");
+    if(el){
+        el.textContent = "Returning to Home in " + resultCountdownSeconds + "s";
+    }
+
+}
 
 
 /* ================= SIZE BUTTONS ================= */
