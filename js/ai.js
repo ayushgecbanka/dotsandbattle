@@ -576,20 +576,18 @@ function getAvailableMovesForState(state){
 
     const moves = [];
 
-    for(let i = 0; i < n - 1; i++){
-
+    for(let i = 0; i < n; i++){
         for(let j = 0; j < n - 1; j++){
-
             const hKey = "h_" + i + "_" + j;
-
             if(!state.lines[hKey]) moves.push({ key: hKey, type: "h", i: i, j: j });
-
-            const vKey = "v_" + i + "_" + j;
-
-            if(!state.lines[vKey]) moves.push({ key: vKey, type: "v", i: i, j: j });
-
         }
+    }
 
+    for(let i = 0; i < n - 1; i++){
+        for(let j = 0; j < n; j++){
+            const vKey = "v_" + i + "_" + j;
+            if(!state.lines[vKey]) moves.push({ key: vKey, type: "v", i: i, j: j });
+        }
     }
 
     return moves;

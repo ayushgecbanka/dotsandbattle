@@ -1,5 +1,19 @@
 /* ================= CHAT ================= */
 
+let lastChatSendTime = 0;
+const CHAT_MIN_INTERVAL_MS = 500;
+const CHAT_MAX_LENGTH = 500;
+const QUICK_MESSAGES = [
+    "Good luck! 🎮",
+    "Nice move! 🔥",
+    "Good game! 👍",
+    "Well played! 👏",
+    "Wait a second...",
+    "GG! 🏆",
+    "Rematch? 🔄"
+];
+
+
 function getChatSender(){
 
     if(currentUser && myProfile){
@@ -30,6 +44,21 @@ function getChatSender(){
 }
 
 
+function isPlayerInRoom(){
+
+    if(!currentUser || !game || !game.players) return false;
+    const uid = currentUser.uid;
+    const p1 = game.players.p1;
+    const p2 = game.players.p2;
+
+    if(p1 && typeof p1 === "object" && p1.uid === uid) return true;
+    if(p2 && typeof p2 === "object" && p2.uid === uid) return true;
+
+    return false;
+
+}
+
+
 function setupChatListener(){
 
     cleanupChatListener();
@@ -45,13 +74,19 @@ function setupChatListener(){
         const data = snapshot.val();
         if(!data) return;
 
-        renderChatMessage(data);
-
-        if(!data.system && data.uid !== getChatSender().uid){
+        if(data.uid && isPlayerInRoom() &&
+           data.uid !== getChatSender().uid){
+            renderChatMessage(data);
             if(!chatFocused || !document.hasFocus()){
                 unreadCount++;
                 updateUnreadCount();
             }
+        }
+        else if(data.system){
+            renderChatMessage(data);
+        }
+        else if(data.uid === getChatSender().uid){
+            renderChatMessage(data);
         }
 
         scrollChatToBottom();
@@ -96,9 +131,16 @@ function sendChatMessage(){
 
     let text = (input.value || "").trim();
     if(!text) return;
-    if(text.length > 200) text = text.substring(0, 200);
+
+    if(text.length > CHAT_MAX_LENGTH) text = text.substring(0, CHAT_MAX_LENGTH);
 
     if(gameMode !== "online" || !roomCode || !db) return;
+
+    if(!isPlayerInRoom()) return;
+
+    const now = Date.now();
+    if(now - lastChatSendTime < CHAT_MIN_INTERVAL_MS) return;
+    lastChatSendTime = now;
 
     const sender = getChatSender();
 
@@ -121,6 +163,39 @@ function sendChatMessage(){
 
     input.value = "";
     updateCounter();
+
+}
+
+
+function sendQuickMessage(text){
+
+    if(gameMode !== "online" || !roomCode || !db) return;
+    if(!isPlayerInRoom()) return;
+
+    text = (text || "").trim();
+    if(!text) return;
+    if(text.length > CHAT_MAX_LENGTH) text = text.substring(0, CHAT_MAX_LENGTH);
+
+    const now = Date.now();
+    if(now - lastChatSendTime < CHAT_MIN_INTERVAL_MS) return;
+    lastChatSendTime = now;
+
+    const sender = getChatSender();
+
+    db.ref("rooms/" + roomCode + "/chat")
+        .push()
+        .set({
+            type: "text",
+            uid: sender.uid,
+            username: sender.username,
+            displayName: sender.displayName,
+            photoURL: sender.photoURL,
+            text: text,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        })
+        .catch(function(error){
+            console.error(error);
+        });
 
 }
 
@@ -308,6 +383,22 @@ function initializeChat(){
         if(t && t.id === "stickerBtn") return;
         closeStickerPicker();
     });
+
+    /* Quick message buttons */
+    const quickContainer = document.getElementById("chatQuickMessages");
+    if(quickContainer){
+        quickContainer.innerHTML = "";
+        QUICK_MESSAGES.forEach(function(msg){
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "chat-quick-btn";
+            btn.textContent = msg;
+            btn.addEventListener("click", function(){
+                sendQuickMessage(msg);
+            });
+            quickContainer.appendChild(btn);
+        });
+    }
 
     updateCounter();
     resizeChatInput();
