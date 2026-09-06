@@ -50,62 +50,76 @@ function getAvatarById(id){
 }
 
 
+function getAvatarSource(user){
+    const target = user || (myProfile ? {
+        uid: currentUser ? currentUser.uid : "",
+        username: myProfile.username || "",
+        displayName: myProfile.displayName || "",
+        name: myProfile.displayName || "",
+        photoURL: myProfile.photoURL || "",
+        avatarType: myProfile.avatarType || "google",
+        avatarId: myProfile.avatarId || ""
+    } : {});
+
+    const avatarType = target.avatarType || "google";
+    const avatarId = target.avatarId || "";
+    const photoURL = target.photoURL || "";
+    const name = target.name || target.displayName || target.username || "";
+    const fallbackSeed = target.uid || target.username || name || "player";
+    const fallbackUrl =
+        "https://api.dicebear.com/7.x/adventurer/svg?seed=" +
+        encodeURIComponent(fallbackSeed);
+
+    let src = photoURL;
+    if(avatarType === "cartoon" && avatarId){
+        const found = getAvatarById(avatarId);
+        if(found) src = found.url;
+    }
+
+    return { src: src || fallbackUrl, fallbackUrl: fallbackUrl, name: name };
+}
+
+
 function renderUserAvatar(wrapEl, user){
     if(!wrapEl) return;
     while(wrapEl.firstChild) wrapEl.removeChild(wrapEl.firstChild);
 
-    const avatar = getUserAvatar();
-    let src = "";
-
-    if(avatar.avatarType === "cartoon" && avatar.avatarId){
-        const found = getAvatarById(avatar.avatarId);
-        if(found) src = found.url;
-    }
-
-    if(!src && user && user.photoURL) src = user.photoURL;
-    if(!src && myProfile && myProfile.photoURL) src = myProfile.photoURL;
-
-    /* Always have a DiceBear fallback URL generated from the user's UID
-       or display name. This guarantees a working image even if:
-       - Google photoURL is missing, blocked, or returns a CORS error
-       - The DiceBear cartoon URL fails to load
-       - The user has no avatar configured
-
-       If the primary src is empty, use the DiceBear fallback directly
-       as the primary source. This prevents the "broken image" icon
-       with alt text from ever appearing. */
-
-    const fallbackSeed = (currentUser && currentUser.uid) ?
-        currentUser.uid :
-        ((user && user.name) ? user.name : (myProfile && myProfile.displayName) ? myProfile.displayName : "player");
-
-    const fallbackUrl = "https://api.dicebear.com/7.x/adventurer/svg?seed=" + encodeURIComponent(fallbackSeed);
-
-    if(!src) src = fallbackUrl;
-
-    if(src){
-        const img = document.createElement("img");
-        img.src = src;
-        img.className = "avatar";
-        img.alt = "";
-        img.onerror = function(){
-            /* If the primary image fails to load (e.g., Google photoURL
-               blocked, CORS issue, or invalid URL), fall back to the
-               DiceBear avatar. This prevents the broken-image icon. */
-
-            if(this.src === fallbackUrl) return;
-            this.onerror = null;
-            this.src = fallbackUrl;
-        };
-        wrapEl.appendChild(img);
-    }
-    else{
+    const avatar = getAvatarSource(user);
+    const img = document.createElement("img");
+    img.src = avatar.src;
+    img.className = "avatar";
+    img.alt = "";
+    img.onerror = function(){
+        if(this.src !== avatar.fallbackUrl){
+            this.src = avatar.fallbackUrl;
+            return;
+        }
+        this.remove();
         const span = document.createElement("span");
         span.className = "avatar-fallback";
-        const name = (user && user.name) ? user.name : (myProfile && myProfile.displayName) ? myProfile.displayName : "?";
-        span.textContent = name.charAt(0).toUpperCase();
+        span.textContent = (avatar.name || "?").charAt(0).toUpperCase();
         wrapEl.appendChild(span);
-    }
+    };
+    wrapEl.appendChild(img);
+}
+
+
+function renderAvatarImage(imgEl, user){
+    if(!imgEl) return;
+
+    const avatar = getAvatarSource(user);
+    imgEl.src = avatar.src;
+    imgEl.alt = "";
+    imgEl.style.display = "";
+    imgEl.onerror = function(){
+        if(this.src !== avatar.fallbackUrl){
+            this.src = avatar.fallbackUrl;
+            return;
+        }
+        this.onerror = null;
+        this.removeAttribute("src");
+        this.style.display = "none";
+    };
 }
 
 

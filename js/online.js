@@ -149,11 +149,41 @@ document
     });
 
 
+async function reserveRoomPlayer2(code, name){
+    const joinPlayer = buildPlayerObject(name);
+    const result = await db.ref("rooms/" + code).transaction(function(current){
+        if(!current || !current.players || !current.players.p1 || current.players.p2){
+            return;
+        }
+
+        const roomSize = Number(current.size);
+        if(!Number.isInteger(roomSize) || roomSize < 3 || roomSize > 6){
+            return;
+        }
+
+        current.players.p2 = joinPlayer;
+        return current;
+    });
+
+    return result.committed ? result.snapshot.val() : null;
+}
+
+
 async function performJoin(code, name){
 
     if(!firebaseLoaded) return false;
+    if(!currentUser){
+        setStatus("Please sign in before joining a room.");
+        return false;
+    }
 
     try{
+
+        const reservedRoom = await reserveRoomPlayer2(code, name);
+        if(!reservedRoom){
+            setStatus("Room is unavailable or already full.");
+            return false;
+        }
 
         const snapshot =
         await db
@@ -172,8 +202,18 @@ async function performJoin(code, name){
         const data =
         snapshot.val();
 
+        const roomSize = Number(data.size);
+        if(!Number.isInteger(roomSize) || roomSize < 3 || roomSize > 6){
+            setStatus("Room has an invalid board size.");
+            return false;
+        }
 
-    if(data.players.p2){
+        selectedSize = roomSize;
+        document.querySelectorAll("#onlineBoardOptions .size-btn").forEach(function(button){
+            button.classList.toggle("selected", Number(button.dataset.size) === roomSize);
+        });
+
+    if(data.players.p2 && data.players.p2.uid !== currentUser.uid){
 
         setStatus("❌ Room already full hai.");
         return false;
@@ -188,15 +228,6 @@ async function performJoin(code, name){
 
 
         game = data;
-
-
-        await db
-        .ref(
-            "rooms/"+roomCode+
-            "/players/p2"
-        )
-        .set(buildPlayerObject(name));
-
 
         openGame();
 

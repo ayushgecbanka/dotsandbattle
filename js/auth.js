@@ -375,7 +375,14 @@ function renderAuthState(){
         signedIn.style.display = "flex";
 
         const avatarEl = document.getElementById("authAvatar");
-        renderUserAvatar(avatarEl, { photoURL: myProfile.photoURL, name: myProfile.displayName });
+        renderUserAvatar(avatarEl, {
+            uid: currentUser.uid,
+            username: myProfile.username || "",
+            displayName: myProfile.displayName || "",
+            photoURL: myProfile.photoURL || "",
+            avatarType: myProfile.avatarType || "google",
+            avatarId: myProfile.avatarId || ""
+        });
 
         document.getElementById("authName").textContent =
             myProfile.displayName || currentUser.displayName || "Player";
@@ -387,6 +394,8 @@ function renderAuthState(){
     else{
         signedOut.style.display = "block";
         signedIn.style.display = "none";
+        const avatarEl = document.getElementById("authAvatar");
+        if(avatarEl) avatarEl.innerHTML = "";
     }
 
 }
@@ -405,25 +414,14 @@ function showProfileModal(){
 
     const p = myProfile;
 
-    const photo = document.getElementById("modalPhoto");
-    const avatar = getUserAvatar();
-    if(avatar.avatarType === "cartoon" && avatar.avatarId){
-        const found = getAvatarById(avatar.avatarId);
-        if(found){
-            photo.src = found.url;
-            photo.style.display = "";
-        }
-        else{
-            photo.style.display = "none";
-        }
-    }
-    else if(p.photoURL){
-        photo.src = p.photoURL;
-        photo.style.display = "";
-    }
-    else{
-        photo.style.display = "none";
-    }
+    renderAvatarImage(document.getElementById("modalPhoto"), {
+        uid: currentUser.uid,
+        username: p.username || "",
+        displayName: p.displayName || "",
+        photoURL: p.photoURL || "",
+        avatarType: p.avatarType || "google",
+        avatarId: p.avatarId || ""
+    });
 
     document.getElementById("modalName").textContent = p.displayName || "";
     document.getElementById("modalUsername").textContent = "@" + (p.username || "");

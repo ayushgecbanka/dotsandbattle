@@ -417,6 +417,7 @@ async function friendRowEl(f){
     const avatarWrap = document.createElement("div");
     avatarWrap.className = "f-avatar" + (f.online ? "" : " off");
     const avatarInfo = {
+        uid: f.uid,
         photoURL: f.photoURL || "",
         avatarType: f.avatarType || "google",
         avatarId: f.avatarId || "",
@@ -527,6 +528,7 @@ async function searchResultEl(uid, p){
     const avatarWrap = document.createElement("div");
     avatarWrap.className = "f-avatar";
     const avatarInfo = {
+        uid: uid,
         photoURL: p.photoURL || "",
         avatarType: p.avatarType || "google",
         avatarId: p.avatarId || "",
@@ -717,6 +719,7 @@ function requestRowEl(senderUid, r){
     const avatarWrap = document.createElement("div");
     avatarWrap.className = "f-avatar";
     const avatarInfo = {
+        uid: senderUid,
         photoURL: r.fromPhotoURL || "",
         avatarType: r.fromAvatarType || "google",
         avatarId: r.fromAvatarId || "",
@@ -815,6 +818,7 @@ function inviteRowEl(inviteId, inv, isSent){
     const avatarWrap = document.createElement("div");
     avatarWrap.className = "f-avatar";
     const avatarInfo = {
+        uid: inv.fromUid || "",
         photoURL: inv.fromPhotoURL || "",
         avatarType: inv.fromAvatarType || "google",
         avatarId: inv.fromAvatarId || "",
@@ -901,29 +905,14 @@ function showFriendProfile(uid){
     db.ref("publicProfiles/" + uid).once("value", function(s){
         const p = s.val();
         if(!p){ showNotification("Profile not found."); return; }
-        const photo = document.getElementById("friendPhoto");
-        const avatar = { avatarType: p.avatarType || "google", avatarId: p.avatarId || "", photoURL: p.photoURL || "", name: p.displayName || "Player" };
-        if(avatar.avatarType === "cartoon" && avatar.avatarId){
-            const found = getAvatarById(avatar.avatarId);
-            if(found){
-                photo.src = found.url;
-                photo.style.display = "";
-            }
-            else if(avatar.photoURL){
-                photo.src = avatar.photoURL;
-                photo.style.display = "";
-            }
-            else{
-                photo.style.display = "none";
-            }
-        }
-        else if(avatar.photoURL){
-            photo.src = avatar.photoURL;
-            photo.style.display = "";
-        }
-        else{
-            photo.style.display = "none";
-        }
+        renderAvatarImage(document.getElementById("friendPhoto"), {
+            uid: p.uid || uid,
+            username: p.username || "",
+            displayName: p.displayName || "",
+            photoURL: p.photoURL || "",
+            avatarType: p.avatarType || "google",
+            avatarId: p.avatarId || ""
+        });
         document.getElementById("friendName").textContent = p.displayName || "";
         document.getElementById("friendUsername").textContent = "@" + (p.username || "");
         const st = p.stats || {};

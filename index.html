@@ -118,7 +118,7 @@ FIREBASE SECURITY RULES (apply in Firebase Console > Realtime Database > Rules):
     </div>
 
     <div id="authSignedIn" class="auth-signed-in" style="display:none;">
-        <img id="authAvatar" class="auth-avatar" alt="avatar">
+        <span id="authAvatar" class="auth-avatar" aria-label="Profile avatar"></span>
         <div class="auth-meta">
             <div class="auth-name" id="authName">Player</div>
             <div class="auth-username" id="authUsername">@player</div>
@@ -237,6 +237,8 @@ FIREBASE SECURITY RULES (apply in Firebase Console > Realtime Database > Rules):
     style="display:none;"
 >
 
+<div class="game-area">
+
 <div class="game-header">
 
 <div class="room">
@@ -306,12 +308,28 @@ Player 2
     id="resultCountdown"
 ></div>
 
+<button
+    type="button"
+    class="back-btn"
+    id="backHome"
+>
+    BACK TO HOME
+</button>
+
+</div>
+<!-- ================= GAME AREA END ================= -->
+
 
 <!-- ================= MATCH CHAT ================= -->
 <div class="chat-panel" id="chatPanel" style="display:none;">
     <div class="chat-header">
-        💬 MATCH CHAT
+        <span class="chat-title">💬 MATCH CHAT</span>
         <span class="chat-unread" id="chatUnread"></span>
+        <button type="button" class="chat-close-btn" id="chatCloseBtn" title="Close chat">✕</button>
+    </div>
+    <div class="chat-new-indicator" id="chatNewIndicator">
+        <span>NEW MESSAGES</span>
+        <button type="button" class="chat-new-btn" id="chatNewBtn">↓</button>
     </div>
     <div class="chat-messages" id="chatMessages"></div>
 
@@ -333,13 +351,13 @@ Player 2
     <div class="chat-counter"><span id="chatCounter">0 / 500</span></div>
 </div>
 
-
 <button
     type="button"
-    class="back-btn"
-    id="backHome"
+    class="chat-fab"
+    id="chatFab"
+    title="Open Chat"
 >
-    BACK TO HOME
+    💬
 </button>
 
 </div>

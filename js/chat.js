@@ -3,6 +3,7 @@
 let lastChatSendTime = 0;
 const CHAT_MIN_INTERVAL_MS = 500;
 const CHAT_MAX_LENGTH = 500;
+let chatNewIndicatorTimer = null;
 const QUICK_MESSAGES = [
     "Good luck! 🎮",
     "Nice move! 🔥",
@@ -81,15 +82,31 @@ function setupChatListener(){
                 unreadCount++;
                 updateUnreadCount();
             }
+            if(!isChatScrolledToBottom()){
+                showChatNewIndicator();
+            }
+            else{
+                scrollChatToBottom();
+            }
         }
         else if(data.system){
             renderChatMessage(data);
+            if(!isChatScrolledToBottom()){
+                showChatNewIndicator();
+            }
+            else{
+                scrollChatToBottom();
+            }
         }
         else if(data.uid === getChatSender().uid){
             renderChatMessage(data);
+            if(isChatScrolledToBottom()){
+                scrollChatToBottom();
+            }
+            else{
+                showChatNewIndicator();
+            }
         }
-
-        scrollChatToBottom();
 
     });
 
@@ -117,6 +134,16 @@ function cleanupChatListener(){
 
     const box = document.getElementById("chatMessages");
     if(box) box.innerHTML = "";
+
+    const panel = document.getElementById("chatPanel");
+    if(panel){
+        panel.style.display = "none";
+        panel.classList.remove("chat-open");
+    }
+    const fab = document.getElementById("chatFab");
+    if(fab){
+        fab.style.display = "none";
+    }
 
     unreadCount = 0;
     updateUnreadCount();
@@ -150,6 +177,8 @@ function sendChatMessage(){
         username: sender.username,
         displayName: sender.displayName,
         photoURL: sender.photoURL,
+        avatarType: sender.avatarType,
+        avatarId: sender.avatarId,
         text: text,
         timestamp: firebase.database.ServerValue.TIMESTAMP
     };
@@ -190,6 +219,8 @@ function sendQuickMessage(text){
             username: sender.username,
             displayName: sender.displayName,
             photoURL: sender.photoURL,
+            avatarType: sender.avatarType,
+            avatarId: sender.avatarId,
             text: text,
             timestamp: firebase.database.ServerValue.TIMESTAMP
         })
@@ -242,6 +273,7 @@ function renderChatMessage(data){
     const avatarWrap = document.createElement("span");
     avatarWrap.className = "chat-avatar";
     const avatarInfo = {
+        uid: data.uid || "",
         photoURL: data.photoURL || "",
         avatarType: data.avatarType || "google",
         avatarId: data.avatarId || "",
@@ -291,11 +323,137 @@ function formatTime(ts){
 
 }
 
-
 function scrollChatToBottom(){
 
     const box = document.getElementById("chatMessages");
-    if(box) box.scrollTop = box.scrollHeight;
+
+    if(box){
+
+        box.scrollTop = box.scrollHeight;
+
+        hideChatNewIndicator();
+
+    }
+
+}
+
+
+function isChatScrolledToBottom(){
+
+    const box = document.getElementById("chatMessages");
+
+    if(!box){
+
+        return true;
+
+    }
+
+    return box.scrollHeight - box.scrollTop - box.clientHeight < 50;
+
+}
+
+
+function showChatNewIndicator(){
+
+    const indicator = document.getElementById("chatNewIndicator");
+
+    if(!indicator) return;
+
+    if(indicator.classList.contains("show")){
+
+        if(chatNewIndicatorTimer){
+
+            clearTimeout(chatNewIndicatorTimer);
+
+        }
+
+        chatNewIndicatorTimer = setTimeout(function(){
+
+            const el = document.getElementById("chatNewIndicator");
+
+            if(el){
+
+                el.classList.remove("show");
+
+            }
+
+        }, 4000);
+
+        return;
+
+    }
+
+    indicator.classList.add("show");
+
+    if(chatNewIndicatorTimer){
+
+        clearTimeout(chatNewIndicatorTimer);
+
+    }
+
+    chatNewIndicatorTimer = setTimeout(function(){
+
+        const el = document.getElementById("chatNewIndicator");
+
+        if(el){
+
+            el.classList.remove("show");
+
+        }
+
+    }, 4000);
+
+}
+
+
+function hideChatNewIndicator(){
+
+    const indicator = document.getElementById("chatNewIndicator");
+
+    if(!indicator) return;
+
+    indicator.classList.remove("show");
+
+    if(chatNewIndicatorTimer){
+
+        clearTimeout(chatNewIndicatorTimer);
+
+        chatNewIndicatorTimer = null;
+
+    }
+
+}
+
+
+function toggleChatPanel(){
+
+    const panel = document.getElementById("chatPanel");
+
+    const fab = document.getElementById("chatFab");
+
+    if(!panel) return;
+
+    const isOpen = panel.classList.contains("chat-open");
+
+    if(isOpen){
+
+        panel.classList.remove("chat-open");
+
+        if(fab){ fab.style.display = "flex"; }
+
+    }
+
+    else{
+
+        panel.classList.add("chat-open");
+
+        if(fab){ fab.style.display = "none"; }
+
+        clearUnreadCount();
+
+        scrollChatToBottom();
+
+    }
 
 }
 
@@ -328,7 +486,7 @@ function updateCounter(){
     const input = document.getElementById("chatInput");
     const counter = document.getElementById("chatCounter");
     if(input && counter){
-        counter.textContent = input.value.length + " / 200";
+        counter.textContent = input.value.length + " / " + CHAT_MAX_LENGTH;
     }
 
 }
@@ -369,6 +527,40 @@ function initializeChat(){
         stickerBtn.addEventListener("click", openStickerPicker);
     }
 
+    const chatFab = document.getElementById("chatFab");
+    if(chatFab){
+        chatFab.addEventListener("click", toggleChatPanel);
+    }
+
+    const chatCloseBtn = document.getElementById("chatCloseBtn");
+    if(chatCloseBtn){
+        chatCloseBtn.addEventListener("click", toggleChatPanel);
+    }
+
+    const chatNewBtn = document.getElementById("chatNewBtn");
+    if(chatNewBtn){
+        chatNewBtn.addEventListener("click", function(){
+            scrollChatToBottom();
+            clearUnreadCount();
+        });
+    }
+
+    const chatMessages = document.getElementById("chatMessages");
+    if(chatMessages){
+        let scrollTimer = null;
+        chatMessages.addEventListener("scroll", function(){
+            hideChatNewIndicator();
+            if(scrollTimer){
+                clearTimeout(scrollTimer);
+            }
+            scrollTimer = setTimeout(function(){
+                if(isChatScrolledToBottom()){
+                    clearUnreadCount();
+                }
+            }, 500);
+        });
+    }
+
     document.addEventListener("keydown", function(e){
         if(e.key === "Escape"){
             closeStickerPicker();
@@ -405,6 +597,63 @@ function initializeChat(){
 
 }
 
+
+let chatResizeTimer = null;
+
+
+function handleChatResize(){
+
+    const panel = document.getElementById("chatPanel");
+    const fab = document.getElementById("chatFab");
+
+    if(!panel) return;
+
+    if(chatResizeTimer){
+
+        clearTimeout(chatResizeTimer);
+
+    }
+
+    chatResizeTimer = setTimeout(function(){
+
+        chatResizeTimer = null;
+
+        if(gameMode === "online"){
+
+            panel.style.display = "flex";
+
+            if(window.matchMedia("(max-width: 800px)").matches){
+
+                if(!panel.classList.contains("chat-open")){
+
+                    if(fab){ fab.style.display = "flex"; }
+
+                }
+
+                else{
+
+                    if(fab){ fab.style.display = "none"; }
+
+                }
+
+            }
+
+            else{
+
+                panel.classList.add("chat-open");
+
+                if(fab){ fab.style.display = "none"; }
+
+            }
+
+        }
+
+    }, 150);
+
+}
+
+
+window.addEventListener("resize", handleChatResize);
 
 initializeChat();
 
@@ -486,6 +735,8 @@ function sendSticker(sticker){
         username: sender.username,
         displayName: sender.displayName,
         photoURL: sender.photoURL,
+        avatarType: sender.avatarType,
+        avatarId: sender.avatarId,
         timestamp: firebase.database.ServerValue.TIMESTAMP
     };
 

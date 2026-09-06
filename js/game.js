@@ -97,10 +97,16 @@ function goHome(){
     document.getElementById("onlineSetup").style.display = "none";
 
     document.getElementById("gameScreen").style.display = "none";
+    document.getElementById("gameScreen").classList.remove("online-layout");
 
     const chatPanel = document.getElementById("chatPanel");
+    const chatFab = document.getElementById("chatFab");
     if(chatPanel){
         chatPanel.style.display = "none";
+        chatPanel.classList.remove("chat-open");
+    }
+    if(chatFab){
+        chatFab.style.display = "none";
     }
 
     document.getElementById("result").textContent = "";
@@ -626,6 +632,14 @@ function openGame(){
 
     document.getElementById("gameScreen").style.display = "block";
 
+    const gameScreen = document.getElementById("gameScreen");
+    if(gameMode === "online"){
+        gameScreen.classList.add("online-layout");
+    }
+    else{
+        gameScreen.classList.remove("online-layout");
+    }
+
     document.getElementById("roomDisplay").textContent =
     gameMode === "online" ? roomCode : "";
 
@@ -636,9 +650,24 @@ function openGame(){
     }
 
     const chatPanel = document.getElementById("chatPanel");
+    const chatFab = document.getElementById("chatFab");
     if(chatPanel){
-        chatPanel.style.display =
-        gameMode === "online" ? "block" : "none";
+        if(gameMode === "online"){
+            chatPanel.style.display = "flex";
+            if(window.matchMedia("(max-width: 800px)").matches){
+                chatPanel.classList.remove("chat-open");
+                if(chatFab){ chatFab.style.display = "flex"; }
+            }
+            else{
+                chatPanel.classList.add("chat-open");
+                if(chatFab){ chatFab.style.display = "none"; }
+            }
+        }
+        else{
+            chatPanel.style.display = "none";
+            chatPanel.classList.remove("chat-open");
+            if(chatFab){ chatFab.style.display = "none"; }
+        }
     }
 
     if(gameMode === "online"){
