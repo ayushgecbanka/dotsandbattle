@@ -85,6 +85,9 @@ async function createRoomCore(nameOverride){
     };
 
     // DETAILED DIAGNOSTIC LOGGING — for debugging CREATE ROOM failure
+    const authUser = firebase.auth && firebase.auth().currentUser;
+    const authUid = authUser ? authUser.uid : null;
+    const authAnon = authUser ? authUser.isAnonymous : null;
     console.log("[createRoomCore] === START ===");
     console.log("[createRoomCore] roomCode:", JSON.stringify(roomCode));
     console.log("[createRoomCore] currentUser:", currentUser ? {
@@ -92,9 +95,9 @@ async function createRoomCore(nameOverride){
         isAnonymous: currentUser.isAnonymous,
         providerId: currentUser.providerId
     } : null);
-    console.log("[createRoomCore] auth.currentUser:", firebase.auth().currentUser ? {
-        uid: firebase.auth().currentUser.uid,
-        isAnonymous: firebase.auth().currentUser.isAnonymous
+    console.log("[createRoomCore] auth.currentUser:", authUser ? {
+        uid: authUid,
+        isAnonymous: authAnon
     } : null);
     console.log("[createRoomCore] selectedSize:", selectedSize, "typeof:", typeof selectedSize);
     console.log("[createRoomCore] game object keys:", Object.keys(game));
@@ -128,7 +131,9 @@ async function createRoomCore(nameOverride){
         console.error("[createRoomCore] error.stack:", error && error.stack);
         console.error("[createRoomCore] full error object:", error);
 
-        setStatus("❌ Room create error: " + (error && error.code ? error.code : "unknown"));
+        const errCode = (error && error.code) ? error.code : "unknown";
+        const errMsg = (error && error.message) ? error.message : "no-message";
+        setStatus("❌ Room create error: " + errCode + " | " + errMsg + " | uid=" + (currentUser ? currentUser.uid : "null") + " | anon=" + (currentUser ? currentUser.isAnonymous : "n/a") + " | authUid=" + authUid + " | roomCode=" + roomCode + " | size=" + selectedSize + " | path=rooms/" + roomCode);
 
         return false;
 
