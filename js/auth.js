@@ -391,6 +391,11 @@ function buildPlayerObject(nameFallback){
 
 /* ================= PROFILE UI ================= */
 
+function isGoogleUser(){
+    return !!currentUser && !currentUser.isAnonymous && !!myProfile;
+}
+
+
 function renderAuthState(){
 
     const signedOut = document.getElementById("authSignedOut");
@@ -463,6 +468,12 @@ function renderAuthState(){
         signedIn.style.display = "none";
         const avatarEl = document.getElementById("authAvatar");
         if(avatarEl) avatarEl.innerHTML = "";
+    }
+
+    // Friends card visibility — Google users only
+    const friendsCard = document.getElementById("friendsCard");
+    if(friendsCard){
+        friendsCard.style.display = isGoogleUser() ? "" : "none";
     }
 
 }

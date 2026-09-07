@@ -120,11 +120,10 @@ function cleanupChatListener(){
     const box = document.getElementById("chatMessages");
     if(box) box.innerHTML = "";
 
-    const panel = document.getElementById("chatPanel");
-    if(panel){
-        panel.style.display = "none";
-        panel.classList.remove("chat-open");
-    }
+    // Do NOT hide the panel here — openGame() already sets the correct
+    // display state before calling setupChatListener(). Hiding here
+    // would make the chat panel disappear immediately after openGame()
+    // shows it. Visibility is managed by openGame() based on gameMode.
     const fab = document.getElementById("chatFab");
     if(fab){
         fab.style.display = "none";
@@ -172,12 +171,19 @@ function sendChatMessage(){
     db.ref("rooms/" + roomCode + "/chat")
         .push()
         .set(messageData)
+        .then(function(){
+            // Only clear the input and update the counter after
+            // the Firebase write succeeds. On failure, keep the text
+            // so the user does not silently lose their message.
+            input.value = "";
+            updateCounter();
+        })
         .catch(function(error){
-            console.error(error);
+            console.error("sendChatMessage error:", error);
+            if(typeof showNotification === "function"){
+                showNotification("⚠️ Message not sent. Please try again.");
+            }
         });
-
-    input.value = "";
-    updateCounter();
 
 }
 

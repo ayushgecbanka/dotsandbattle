@@ -14,50 +14,24 @@ document
 
     }
 
-    await createRoomCore();
-
-});
-
-
-/* ================= PLAY GUEST ================= */
-
-document
-.getElementById("playGuest")
-.addEventListener("click", async function(){
-
-    if(!firebaseLoaded){
-
-        document.getElementById("status")
-        .textContent =
-        "⏳ Firebase loading... please wait.";
-
-        return;
-
+    // Ensure an authenticated Firebase user before creating a room.
+    // If not signed in (Google or anonymous), auto sign-in anonymously.
+    if(!currentUser){
+        try{
+            setStatus("🔄 Connecting...");
+            await signInAnonymously();
+        }
+        catch(error){
+            console.error(error);
+            setStatus("❌ Could not start. Please try again.");
+            return;
+        }
     }
-
-    if(!firebase.auth){
-
-        document.getElementById("status")
-        .textContent =
-        "⚠️ Firebase Authentication not available.";
-
-        return;
-
-    }
-
-    setStatus("🔄 Signing in as guest...");
-
-    await signInAnonymously();
 
     if(!currentUser){
-
-        setStatus("❌ Guest sign-in failed. Please try again.");
-
+        setStatus("❌ Authentication failed.");
         return;
-
     }
-
-    showNotification("👋 Playing as " + getOnlinePlayerIdentity().name);
 
     await createRoomCore();
 
@@ -172,6 +146,23 @@ document
 
         }
 
+        // Ensure an authenticated Firebase user before joining a room.
+        if(!currentUser){
+            try{
+                setStatus("🔄 Connecting...");
+                await signInAnonymously();
+            }
+            catch(error){
+                console.error(error);
+                setStatus("❌ Could not join. Please try again.");
+                return;
+            }
+        }
+
+        if(!currentUser){
+            setStatus("❌ Authentication failed.");
+            return;
+        }
 
         await performJoin(code);
 
