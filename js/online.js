@@ -84,6 +84,26 @@ async function createRoomCore(nameOverride){
 
     };
 
+    // DETAILED DIAGNOSTIC LOGGING — for debugging CREATE ROOM failure
+    console.log("[createRoomCore] === START ===");
+    console.log("[createRoomCore] roomCode:", JSON.stringify(roomCode));
+    console.log("[createRoomCore] currentUser:", currentUser ? {
+        uid: currentUser.uid,
+        isAnonymous: currentUser.isAnonymous,
+        providerId: currentUser.providerId
+    } : null);
+    console.log("[createRoomCore] auth.currentUser:", firebase.auth().currentUser ? {
+        uid: firebase.auth().currentUser.uid,
+        isAnonymous: firebase.auth().currentUser.isAnonymous
+    } : null);
+    console.log("[createRoomCore] selectedSize:", selectedSize, "typeof:", typeof selectedSize);
+    console.log("[createRoomCore] game object keys:", Object.keys(game));
+    console.log("[createRoomCore] game object:", JSON.stringify(game));
+    console.log("[createRoomCore] players.p1 keys:", Object.keys(game.players.p1));
+    console.log("[createRoomCore] players.p1.uid:", JSON.stringify(game.players.p1.uid));
+    console.log("[createRoomCore] players.p1.uid === currentUser.uid:", game.players.p1.uid === (currentUser && currentUser.uid));
+    console.log("[createRoomCore] writing to path: rooms/" + roomCode);
+
 
     try{
 
@@ -91,6 +111,7 @@ async function createRoomCore(nameOverride){
         .ref("rooms/"+roomCode)
         .set(game);
 
+        console.log("[createRoomCore] set() RESOLVED — write succeeded");
         renderAuthState();
         openGame();
 
@@ -101,9 +122,13 @@ async function createRoomCore(nameOverride){
     }
     catch(error){
 
-        console.error(error);
+        console.error("[createRoomCore] set() REJECTED — Firebase error:");
+        console.error("[createRoomCore] error.code:", error && error.code);
+        console.error("[createRoomCore] error.message:", error && error.message);
+        console.error("[createRoomCore] error.stack:", error && error.stack);
+        console.error("[createRoomCore] full error object:", error);
 
-        setStatus("❌ Room create error.");
+        setStatus("❌ Room create error: " + (error && error.code ? error.code : "unknown"));
 
         return false;
 
