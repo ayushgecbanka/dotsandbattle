@@ -14,6 +14,8 @@ let currentUser = null;
 
 let myProfile = null;
 
+let presenceStarted = false;
+
 let resultRecorded = false;
 
 let chatRef = null;

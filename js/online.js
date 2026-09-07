@@ -14,24 +14,62 @@ document
 
     }
 
-    if(!currentUser){
+    await createRoomCore();
+
+});
+
+
+/* ================= PLAY GUEST ================= */
+
+document
+.getElementById("playGuest")
+.addEventListener("click", async function(){
+
+    if(!firebaseLoaded){
 
         document.getElementById("status")
         .textContent =
-        "⚠️ Sign in with Google first.";
+        "⏳ Firebase loading... please wait.";
 
         return;
 
     }
+
+    if(!firebase.auth){
+
+        document.getElementById("status")
+        .textContent =
+        "⚠️ Firebase Authentication not available.";
+
+        return;
+
+    }
+
+    setStatus("🔄 Signing in as guest...");
+
+    await signInAnonymously();
+
+    if(!currentUser){
+
+        setStatus("❌ Guest sign-in failed. Please try again.");
+
+        return;
+
+    }
+
+    showNotification("👋 Playing as " + getOnlinePlayerIdentity().name);
 
     await createRoomCore();
 
 });
 
 
+/* ================= JOIN ROOM ================= */
+
+
 async function createRoomCore(nameOverride){
 
-    if(!firebaseLoaded) return false;
+    if(!firebaseLoaded || !db) return false;
 
     gameMode = "online";
 
@@ -44,11 +82,7 @@ async function createRoomCore(nameOverride){
 
     myPlayer = "p1";
 
-    const name =
-    nameOverride ||
-    (myProfile && myProfile.displayName) ||
-    (currentUser && currentUser.displayName) ||
-    "Player";
+    const onlinePlayer = getOnlinePlayerIdentity();
 
     game = {
 
@@ -57,7 +91,7 @@ async function createRoomCore(nameOverride){
         gameId:roomCode,
 
         players:{
-            p1:buildPlayerObject(name),
+            p1:onlinePlayer,
             p2:""
         },
 
@@ -83,7 +117,7 @@ async function createRoomCore(nameOverride){
         .ref("rooms/"+roomCode)
         .set(game);
 
-
+        renderAuthState();
         openGame();
 
         listenRoom();
@@ -139,20 +173,76 @@ document
         }
 
 
-        const name =
-        (myProfile && myProfile.displayName) ||
-        (currentUser && currentUser.displayName) ||
-        "Player";
-
-        await performJoin(code, name);
+        await performJoin(code);
 
     });
 
 
-async function reserveRoomPlayer2(code, name){
-    const joinPlayer = buildPlayerObject(name);
+function getOnlinePlayerIdentity(){
+    if(currentUser && myProfile){
+        return {
+            uid: currentUser.uid,
+            name: myProfile.displayName || currentUser.displayName || "Player",
+            username: myProfile.username || "",
+            photoURL: myProfile.photoURL || "",
+            avatarType: myProfile.avatarType || "google",
+            avatarId: myProfile.avatarId || "",
+            isGuest: false
+        };
+    }
+
+    // For anonymous users: always use currentUser.uid as the authoritative ID
+    if(currentUser && currentUser.isAnonymous === true){
+        return {
+            uid: currentUser.uid,
+            name: generateGuestName(currentUser.uid),
+            username: "guest_" + currentUser.uid.slice(0, 8),
+            photoURL: "",
+            avatarType: "google",
+            avatarId: "",
+            isGuest: true
+        };
+    }
+
+    // Fallback: try to get uid from currentUser even if isAnonymous check failed
+    if(currentUser && currentUser.uid){
+        return {
+            uid: currentUser.uid,
+            name: generateGuestName(currentUser.uid),
+            username: "guest_" + currentUser.uid.slice(0, 8),
+            photoURL: "",
+            avatarType: "google",
+            avatarId: "",
+            isGuest: true
+        };
+    }
+
+    return {
+        uid: "",
+        name: "Guest",
+        username: "",
+        photoURL: "",
+        avatarType: "google",
+        avatarId: "",
+        isGuest: true
+    };
+}
+
+
+function generateGuestName(uid){
+    const suffix = uid.slice(-4).toUpperCase();
+    return "Guest " + suffix;
+}
+
+
+async function reserveRoomPlayer2(code){
+    const joinPlayer = getOnlinePlayerIdentity();
     const result = await db.ref("rooms/" + code).transaction(function(current){
         if(!current || !current.players || !current.players.p1 || current.players.p2){
+            return;
+        }
+
+        if(current.players.p1.uid === joinPlayer.uid){
             return;
         }
 
@@ -169,17 +259,13 @@ async function reserveRoomPlayer2(code, name){
 }
 
 
-async function performJoin(code, name){
+async function performJoin(code){
 
     if(!firebaseLoaded) return false;
-    if(!currentUser){
-        setStatus("Please sign in before joining a room.");
-        return false;
-    }
 
     try{
 
-        const reservedRoom = await reserveRoomPlayer2(code, name);
+        const reservedRoom = await reserveRoomPlayer2(code);
         if(!reservedRoom){
             setStatus("Room is unavailable or already full.");
             return false;
@@ -213,7 +299,7 @@ async function performJoin(code, name){
             button.classList.toggle("selected", Number(button.dataset.size) === roomSize);
         });
 
-    if(data.players.p2 && data.players.p2.uid !== currentUser.uid){
+    if(data.players.p2 && data.players.p2.uid !== getOnlinePlayerIdentity().uid){
 
         setStatus("❌ Room already full hai.");
         return false;
@@ -224,18 +310,19 @@ async function performJoin(code, name){
 
     roomCode = code;
 
-        myPlayer = "p2";
+    myPlayer = "p2";
 
 
-        game = data;
+    game = data;
 
-        openGame();
+    renderAuthState();
+    openGame();
 
-        listenRoom();
+    listenRoom();
 
-        sendSystemMessage((myProfile && myProfile.displayName ? myProfile.displayName : name) + " joined the room");
+    sendSystemMessage(getOnlinePlayerIdentity().name + " joined the room");
 
-        return true;
+    return true;
 
     }
     catch(error){
@@ -393,8 +480,6 @@ function startDisconnectGracePeriod(opponentSlot){
 
         if(!game || game.finished || playerLeft) return;
 
-        const me = currentUser.uid;
-
         const mySlot = myPlayer;
 
         const updates = {};
@@ -466,27 +551,30 @@ async function makeOnlineMove(key){
     db.ref("rooms/"+roomCode);
 
 
-    const myUid = currentUser ? currentUser.uid : null;
+    const onlinePlayer = getOnlinePlayerIdentity();
 
     await roomRef.transaction(
     function(current){
 
         if(!current) return current;
 
-        /* SERVER-SIDE PLAYER IDENTITY CHECK:
-           Verify the authenticated user is actually a player in this room. */
-
-        if(!myUid || !current.players ||
-           ((!current.players.p1 || current.players.p1.uid !== myUid) &&
-            (!current.players.p2 || current.players.p2.uid !== myUid))){
+        if(!onlinePlayer.uid || !current.players){
 
             return;
 
         }
 
+        const playerSlot = current.players.p1 && current.players.p1.uid === onlinePlayer.uid
+            ? "p1"
+            : (current.players.p2 && current.players.p2.uid === onlinePlayer.uid ? "p2" : "");
+
+        if(!playerSlot){
+            return;
+        }
+
         /* SERVER-SIDE TURN CHECK */
 
-        if(current.turn !== myPlayer){
+        if(current.turn !== playerSlot){
 
             return;
 
@@ -533,7 +621,7 @@ async function makeOnlineMove(key){
         /* DRAW LINE */
 
         current.lines[key] =
-        myPlayer;
+        playerSlot;
 
 
         let boxesMade = 0;
@@ -584,10 +672,10 @@ async function makeOnlineMove(key){
                 ){
 
                     current.boxes[boxKey] =
-                    myPlayer;
+                    playerSlot;
 
 
-                    current.scores[myPlayer]++;
+                    current.scores[playerSlot]++;
 
 
                     boxesMade++;
@@ -613,7 +701,7 @@ async function makeOnlineMove(key){
         if(boxesMade === 0){
 
             current.turn =
-            myPlayer === "p1"
+            playerSlot === "p1"
             ? "p2"
             : "p1";
 
@@ -667,15 +755,13 @@ async function makeOnlineMove(key){
 
 async function handleLocalForfeit(){
 
-    if(gameMode !== "online" || !roomCode || !db || !currentUser) return;
+    if(gameMode !== "online" || !roomCode || !db) return;
 
     if(playerLeft) return;
 
     playerLeft = true;
 
     resultReason = "forfeit";
-
-    const me = currentUser.uid;
 
     const opponentSlot = myPlayer === "p1" ? "p2" : "p1";
 

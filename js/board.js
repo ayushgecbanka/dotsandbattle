@@ -34,12 +34,26 @@ function renderGame(){
     .textContent =
     p1.name || "Player 1";
 
+    if(p1.isGuest){
+        const badge = document.createElement("span");
+        badge.className = "guest-badge";
+        badge.textContent = "Guest";
+        document.getElementById("p1Display").appendChild(badge);
+    }
+
 
     document
     .getElementById("p2Display")
     .textContent =
     p2.name ||
     "Waiting...";
+
+    if(p2.isGuest && p2.uid){
+        const badge = document.createElement("span");
+        badge.className = "guest-badge";
+        badge.textContent = "Guest";
+        document.getElementById("p2Display").appendChild(badge);
+    }
 
 
     document

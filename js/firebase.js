@@ -82,5 +82,8 @@ function initializeFirebase(){
 
     db = firebase.database();
 
+    // Enable anonymous sign-in
+    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.NONE);
+
 }
 

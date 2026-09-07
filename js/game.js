@@ -113,6 +113,8 @@ function goHome(){
 
     document.getElementById("turnDisplay").textContent = "Waiting...";
 
+    renderAuthState();
+
 }
 
 

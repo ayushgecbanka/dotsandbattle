@@ -53,6 +53,23 @@ function signOutUser(){
 }
 
 
+/* ================= ANONYMOUS SIGN-IN ================= */
+
+async function signInAnonymously(){
+
+    if(!firebaseLoaded || !firebase.auth) return;
+
+    try{
+        await firebase.auth().signInAnonymously();
+    }
+    catch(error){
+        console.error(error);
+        setStatus("❌ Guest sign-in failed: " + (error.message || "Unknown error"));
+    }
+
+}
+
+
 /* ================= AUTH STATE ================= */
 
 function setupAuth(){
@@ -65,16 +82,25 @@ async function handleAuthState(user){
     currentUser = user || null;
 
     if(user){
-        await createOrLoadProfile(user);
-        initializePresence();
-        initializeFriendsListeners();
+        if(user.isAnonymous){
+            myProfile = null;
+            if(!presenceStarted){
+                initializePresence();
+                presenceStarted = true;
+            }
+            renderAuthState();
+        }
+        else{
+            await createOrLoadProfile(user);
+            initializePresence();
+            initializeFriendsListeners();
+        }
     }
     else{
         stopPresence();
         cleanupFriendsListeners();
+        renderAuthState();
     }
-
-    renderAuthState();
 
 }
 
@@ -338,7 +364,8 @@ function getPlayerInfo(slot){
         photoURL: p.photoURL || "",
         uid: p.uid || "",
         avatarType: p.avatarType || "",
-        avatarId: p.avatarId || ""
+        avatarId: p.avatarId || "",
+        isGuest: !!p.isGuest
     };
 
 }
@@ -389,6 +416,46 @@ function renderAuthState(){
 
         document.getElementById("authUsername").textContent =
             "@" + (myProfile.username || "");
+
+        const guestBadge = document.getElementById("authGuestBadge");
+        if(guestBadge) guestBadge.style.display = "none";
+
+    }
+    else if(gameMode === "online" && roomCode){
+
+        const identity = getOnlinePlayerIdentity();
+
+        signedOut.style.display = "none";
+        signedIn.style.display = "flex";
+
+        const avatarEl = document.getElementById("authAvatar");
+        renderUserAvatar(avatarEl, identity);
+
+        document.getElementById("authName").textContent =
+            identity.name || "Guest";
+
+        document.getElementById("authUsername").textContent =
+            identity.isGuest ? "@guest" : "";
+
+        const viewProfileBtn = document.getElementById("viewProfile");
+        if(viewProfileBtn){
+            if(identity.isGuest){
+                viewProfileBtn.style.display = "none";
+            }
+            else{
+                viewProfileBtn.style.display = "";
+            }
+        }
+
+        const guestBadge = document.getElementById("authGuestBadge");
+        if(guestBadge){
+            if(identity.isGuest){
+                guestBadge.style.display = "inline-block";
+            }
+            else{
+                guestBadge.style.display = "none";
+            }
+        }
 
     }
     else{

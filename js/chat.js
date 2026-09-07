@@ -16,30 +16,15 @@ const QUICK_MESSAGES = [
 
 
 function getChatSender(){
-
-    if(currentUser && myProfile){
-        return {
-            uid: currentUser.uid,
-            username: myProfile.username || "",
-            displayName: myProfile.displayName || currentUser.displayName || "Player",
-            photoURL: myProfile.photoURL || "",
-            avatarType: myProfile.avatarType || "google",
-            avatarId: myProfile.avatarId || ""
-        };
-    }
-
-    const p = game && game.players ? game.players[myPlayer] : null;
-    let name = "Player";
-    if(typeof p === "string") name = p;
-    else if(p && p.name) name = p.name;
-
+    const identity = getOnlinePlayerIdentity();
     return {
-        uid: myPlayer || "guest",
-        username: name,
-        displayName: name,
-        photoURL: "",
-        avatarType: "google",
-        avatarId: ""
+        uid: identity.uid,
+        username: identity.username || "",
+        displayName: identity.name || "Player",
+        photoURL: identity.photoURL || "",
+        avatarType: identity.avatarType || "",
+        avatarId: identity.avatarId || "",
+        isGuest: !!identity.isGuest
     };
 
 }
@@ -47,8 +32,8 @@ function getChatSender(){
 
 function isPlayerInRoom(){
 
-    if(!currentUser || !game || !game.players) return false;
-    const uid = currentUser.uid;
+    if(!game || !game.players) return false;
+    const uid = getOnlinePlayerIdentity().uid;
     const p1 = game.players.p1;
     const p2 = game.players.p2;
 
@@ -179,6 +164,7 @@ function sendChatMessage(){
         photoURL: sender.photoURL,
         avatarType: sender.avatarType,
         avatarId: sender.avatarId,
+        isGuest: sender.isGuest,
         text: text,
         timestamp: firebase.database.ServerValue.TIMESTAMP
     };
@@ -221,6 +207,7 @@ function sendQuickMessage(text){
             photoURL: sender.photoURL,
             avatarType: sender.avatarType,
             avatarId: sender.avatarId,
+            isGuest: sender.isGuest,
             text: text,
             timestamp: firebase.database.ServerValue.TIMESTAMP
         })
@@ -284,6 +271,12 @@ function renderChatMessage(data){
     const name = document.createElement("span");
     name.className = "chat-name";
     name.textContent = mine ? "You" : (data.displayName || data.username || "Player");
+    if(data.isGuest && !mine){
+        const guestBadge = document.createElement("span");
+        guestBadge.className = "guest-badge";
+        guestBadge.textContent = "Guest";
+        name.appendChild(guestBadge);
+    }
 
     const time = document.createElement("span");
     time.className = "chat-time";
@@ -725,6 +718,7 @@ function renderStickerGrid(){
 function sendSticker(sticker){
     if(!isStickerAllowed(sticker)) return;
     if(gameMode !== "online" || !roomCode || !db) return;
+    if(!isPlayerInRoom()) return;
 
     const sender = getChatSender();
 
@@ -737,6 +731,7 @@ function sendSticker(sticker){
         photoURL: sender.photoURL,
         avatarType: sender.avatarType,
         avatarId: sender.avatarId,
+        isGuest: sender.isGuest,
         timestamp: firebase.database.ServerValue.TIMESTAMP
     };
 

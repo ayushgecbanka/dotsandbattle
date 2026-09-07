@@ -195,6 +195,14 @@ input:focus{
     background:#273452;
 }
 
+.guest-btn{
+    background:linear-gradient(90deg, #536956, #8bba6c);
+}
+
+.guest-btn:hover{
+    opacity:.9;
+}
+
 .status{
     margin-top:14px;
     min-height:20px;
@@ -285,6 +293,26 @@ input:focus{
 
 .p2-score{
     color:#ff58b2;
+}
+
+
+.guest-badge{
+    display:inline-block;
+    margin-left:6px;
+    padding:2px 8px;
+    font-size:10px;
+    font-weight:600;
+    color:#ffd54f;
+    background:#332b5c;
+    border-radius:4px;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+}
+
+.player-score .guest-badge{
+    margin-left:4px;
+    font-size:8px;
+    padding:1px 6px;
 }
 
 
@@ -1029,6 +1057,12 @@ input:focus{
 .chat-name{
     font-weight:bold;
     color:#fff;
+}
+
+.chat-name .guest-badge{
+    margin-left:4px;
+    font-size:9px;
+    padding:1px 6px;
 }
 
 .chat-time{

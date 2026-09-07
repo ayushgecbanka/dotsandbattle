@@ -7,7 +7,11 @@
 <title>Dots Battle</title>
 
 <!--
-FIREBASE SECURITY RULES (apply in Firebase Console > Realtime Database > Rules):
+FIREBASE SECURITY RULES (apply in Firebase Console > Realtime Database > Rules).
+Guest clients are not Firebase-authenticated, so Realtime Database rules cannot
+prove who owns a guest UID. These room rules limit public writes to valid room
+shapes, but do not provide anti-cheat identity security; use Anonymous Auth or
+a trusted server for that stronger guarantee.
 
 {
   "rules": {
@@ -65,13 +69,16 @@ FIREBASE SECURITY RULES (apply in Firebase Console > Realtime Database > Rules):
     "presence": {
       "$uid": {
         ".read": true,
-        ".write": "auth != null && auth.uid === $uid"
+        ".write": "(auth != null && auth.uid === $uid) || $uid.matches(/^guest_[a-z0-9]+$/)"
       }
     },
     "rooms": {
       "$roomId": {
         ".read": true,
-        ".write": "auth != null && (!data.exists() || root.child('rooms/' + $roomId + '/players/p1/uid').val() === auth.uid || root.child('rooms/' + $roomId + '/players/p2/uid').val() === auth.uid || (!root.child('rooms/' + $roomId + '/players/p2/uid').exists() && newData.child('players/p2/uid').val() === auth.uid))"
+        ".write": "root.child('rooms/' + $roomId + '/players/p1/uid').val() != null || (newData.hasChildren(['size', 'players', 'scores', 'turn', 'lines', 'boxes', 'finished']) && newData.child('size').isNumber() && newData.child('size').val() >= 3 && newData.child('size').val() <= 6 && newData.child('players/p1/uid').isString())",
+        "chat": {
+          ".write": "root.child('rooms/' + $roomId + '/players/p1/uid').val() != null || root.child('rooms/' + $roomId + '/players/p2/uid').val() != null"
+        }
       }
     },
     "gameResults": {
@@ -123,6 +130,7 @@ FIREBASE SECURITY RULES (apply in Firebase Console > Realtime Database > Rules):
             <div class="auth-name" id="authName">Player</div>
             <div class="auth-username" id="authUsername">@player</div>
         </div>
+        <span id="authGuestBadge" class="guest-badge" style="display:none;">Guest</span>
         <button type="button" class="view-profile-btn" id="viewProfile">View Profile</button>
     </div>
 
@@ -209,6 +217,7 @@ FIREBASE SECURITY RULES (apply in Firebase Console > Realtime Database > Rules):
     <div class="card online">
         <h2>🌐 PLAY ONLINE</h2>
         <p>Choose board size, then create a room or join one.</p>
+        <button type="button" class="btn guest-btn" id="playGuest" style="width:100%;margin-bottom:10px;">Play as Guest (No Login Required)</button>
         <label class="setup-label">Board Size</label>
         <div class="board-options" id="onlineBoardOptions">
             <button type="button" class="size-btn" data-size="3">3 × 3<small>4 Boxes</small></button>

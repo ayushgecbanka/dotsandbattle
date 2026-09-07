@@ -515,7 +515,11 @@ function searchPlayers(query){
                 return;
             }
             results.innerHTML = "";
-            results.appendChild(searchResultEl(uid, p));
+            searchResultEl(uid, p).then(function(row){
+                if(row) results.appendChild(row);
+            }).catch(function(error){
+                console.error("searchResultEl error:", error);
+            });
         });
     });
 }
@@ -976,7 +980,7 @@ async function sendGameInvite(friendUid){
 
     let code = roomCode;
     if(!code || !game || game.finished){
-        const ok = await createRoomCore(myProfile ? myProfile.displayName : "Player");
+        const ok = await createRoomCore();
         if(!ok) return;
         code = roomCode;
     }
@@ -1038,7 +1042,7 @@ async function acceptGameInvite(inviteId, invite){
         return;
     }
 
-    const ok = await performJoin(code, myProfile ? myProfile.displayName : (invite.fromUsername || "Player"));
+    const ok = await performJoin(code);
     if(ok){
         const updates = {};
         updates["activeGameInvites/" + currentUser.uid + "/" + invite.fromUid] = null;
