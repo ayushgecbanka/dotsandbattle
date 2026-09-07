@@ -60,10 +60,26 @@ async function signInAnonymously(){
     if(!firebaseLoaded || !firebase.auth) return;
 
     try{
-        await firebase.auth().signInAnonymously();
+        if(currentUser && currentUser.isAnonymous){
+            // Already signed in as anonymous
+            return;
+        }
+        const cred = await firebase.auth().signInAnonymously();
+        // signInAnonymously() resolves with a UserCredential. The
+        // onAuthStateChanged listener also fires, but we set currentUser
+        // here as a safety net in case the listener fires after this
+        // function returns.
+        if(cred && cred.user && !currentUser){
+            currentUser = cred.user;
+        }
+        // Final fallback: read from firebase.auth().currentUser
+        if(!currentUser && firebase.auth().currentUser){
+            currentUser = firebase.auth().currentUser;
+        }
+        console.log("[signInAnonymously] done, currentUser.uid:", currentUser && currentUser.uid, "isAnonymous:", currentUser && currentUser.isAnonymous);
     }
     catch(error){
-        console.error(error);
+        console.error("[signInAnonymously] error:", error);
         setStatus("❌ Guest sign-in failed: " + (error.message || "Unknown error"));
     }
 

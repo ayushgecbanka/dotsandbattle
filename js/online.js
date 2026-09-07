@@ -228,23 +228,44 @@ function generateGuestName(uid){
 
 async function reserveRoomPlayer2(code){
     const joinPlayer = getOnlinePlayerIdentity();
+    console.log("[reserveRoomPlayer2] start", {code: code, joinUid: joinPlayer && joinPlayer.uid, isGuest: joinPlayer && joinPlayer.isGuest});
+
     const result = await db.ref("rooms/" + code).transaction(function(current){
-        if(!current || !current.players || !current.players.p1 || current.players.p2){
+        if(!current){
+            console.log("[reserveRoomPlayer2] abort: room not found", code);
             return;
         }
-
+        if(!current.players){
+            console.log("[reserveRoomPlayer2] abort: no players object", code);
+            return;
+        }
+        if(!current.players.p1){
+            console.log("[reserveRoomPlayer2] abort: no p1", code);
+            return;
+        }
+        if(current.players.p2){
+            console.log("[reserveRoomPlayer2] abort: p2 already set", {code: code, p2Uid: current.players.p2.uid});
+            return;
+        }
         if(current.players.p1.uid === joinPlayer.uid){
+            console.log("[reserveRoomPlayer2] abort: same uid as p1", {code: code, uid: joinPlayer.uid});
             return;
         }
 
         const roomSize = Number(current.size);
         if(!Number.isInteger(roomSize) || roomSize < 3 || roomSize > 6){
+            console.log("[reserveRoomPlayer2] abort: invalid room size", {code: code, size: current.size});
             return;
         }
 
         current.players.p2 = joinPlayer;
+        console.log("[reserveRoomPlayer2] commit: p2 reserved", {code: code, p2Uid: joinPlayer.uid});
         return current;
     });
+
+    if(!result.committed){
+        console.log("[reserveRoomPlayer2] transaction NOT committed", {code: code, snapshotExists: result.snapshot && result.snapshot.exists()});
+    }
 
     return result.committed ? result.snapshot.val() : null;
 }
@@ -254,10 +275,13 @@ async function performJoin(code){
 
     if(!firebaseLoaded) return false;
 
+    console.log("[performJoin] start", {code: code, currentUid: currentUser && currentUser.uid, isAnonymous: currentUser && currentUser.isAnonymous});
+
     try{
 
         const reservedRoom = await reserveRoomPlayer2(code);
         if(!reservedRoom){
+            console.log("[performJoin] reserveRoomPlayer2 returned null for code:", code);
             setStatus("Room is unavailable or already full.");
             return false;
         }
@@ -292,6 +316,7 @@ async function performJoin(code){
 
     if(data.players.p2 && data.players.p2.uid !== getOnlinePlayerIdentity().uid){
 
+        console.log("[performJoin] room already full", {code: code, p2Uid: data.players.p2.uid, myUid: getOnlinePlayerIdentity().uid});
         setStatus("❌ Room already full hai.");
         return false;
 
