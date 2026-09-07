@@ -230,44 +230,66 @@ async function reserveRoomPlayer2(code){
     const joinPlayer = getOnlinePlayerIdentity();
     console.log("[reserveRoomPlayer2] start", {code: code, joinUid: joinPlayer && joinPlayer.uid, isGuest: joinPlayer && joinPlayer.isGuest});
 
+    let abortReason = "unknown";
+
     const result = await db.ref("rooms/" + code).transaction(function(current){
         if(!current){
             console.log("[reserveRoomPlayer2] abort: room not found", code);
+            abortReason = "Room not found";
             return;
         }
         if(!current.players){
             console.log("[reserveRoomPlayer2] abort: no players object", code);
+            abortReason = "Invalid room data: no players";
             return;
         }
         if(!current.players.p1){
             console.log("[reserveRoomPlayer2] abort: no p1", code);
+            abortReason = "Invalid room data: no p1";
             return;
         }
         if(current.players.p2){
             console.log("[reserveRoomPlayer2] abort: p2 already set", {code: code, p2Uid: current.players.p2.uid});
+            abortReason = "Room is already full (P2 already exists)";
             return;
         }
         if(current.players.p1.uid === joinPlayer.uid){
             console.log("[reserveRoomPlayer2] abort: same uid as p1", {code: code, uid: joinPlayer.uid});
+            abortReason = "Same UID as P1 — you cannot join your own room";
             return;
         }
 
         const roomSize = Number(current.size);
         if(!Number.isInteger(roomSize) || roomSize < 3 || roomSize > 6){
             console.log("[reserveRoomPlayer2] abort: invalid room size", {code: code, size: current.size});
+            abortReason = "Invalid room size: " + current.size;
             return;
         }
 
         current.players.p2 = joinPlayer;
         console.log("[reserveRoomPlayer2] commit: p2 reserved", {code: code, p2Uid: joinPlayer.uid});
         return current;
+    }).catch(function(error){
+        console.error("[reserveRoomPlayer2] transaction error:", error);
+        abortReason = "Firebase error: " + (error && error.code ? error.code + " " : "") + (error && error.message ? error.message : "unknown");
     });
+
+    if(!result){
+        // Transaction threw or returned undefined
+        return { success: false, reason: abortReason };
+    }
 
     if(!result.committed){
         console.log("[reserveRoomPlayer2] transaction NOT committed", {code: code, snapshotExists: result.snapshot && result.snapshot.exists()});
+        // If we didn't set an abortReason, it means the transaction was
+        // aborted by Firebase rules (e.g. permission denied).
+        if(abortReason === "unknown"){
+            abortReason = "Transaction not committed (Firebase permission denied or rule blocked write)";
+        }
+        return { success: false, reason: abortReason };
     }
 
-    return result.committed ? result.snapshot.val() : null;
+    return { success: true, data: result.snapshot.val() };
 }
 
 
@@ -277,12 +299,47 @@ async function performJoin(code){
 
     console.log("[performJoin] start", {code: code, currentUid: currentUser && currentUser.uid, isAnonymous: currentUser && currentUser.isAnonymous});
 
+    // Pre-check: verify the room exists before attempting the transaction.
+    // This helps distinguish "room not found" from "transaction failed".
+    try{
+        const preSnap = await db.ref("rooms/" + code).once("value");
+        if(!preSnap.exists()){
+            console.log("[performJoin] pre-check: room not found", code);
+            setStatus("Room not found. Check the code and try again.");
+            return false;
+        }
+        const preData = preSnap.val();
+        if(!preData || !preData.players || !preData.players.p1){
+            console.log("[performJoin] pre-check: invalid room structure", code);
+            setStatus("Room has invalid structure.");
+            return false;
+        }
+        if(preData.players.p2 && preData.players.p2.uid){
+            console.log("[performJoin] pre-check: room already full", {code: code, p2Uid: preData.players.p2.uid});
+            setStatus("Room is already full.");
+            return false;
+        }
+        const p1Uid = preData.players.p1.uid;
+        const myUid = currentUser && currentUser.uid;
+        if(p1Uid && myUid && p1Uid === myUid){
+            console.log("[performJoin] pre-check: same uid as p1", {code: code, uid: myUid});
+            setStatus("You cannot join your own room.");
+            return false;
+        }
+        console.log("[performJoin] pre-check passed", {code: code, p1Uid: p1Uid, myUid: myUid, hasP2: !!preData.players.p2});
+    }
+    catch(preErr){
+        console.error("[performJoin] pre-check error:", preErr);
+        // Continue to transaction attempt even if pre-check fails
+    }
+
     try{
 
-        const reservedRoom = await reserveRoomPlayer2(code);
-        if(!reservedRoom){
-            console.log("[performJoin] reserveRoomPlayer2 returned null for code:", code);
-            setStatus("Room is unavailable or already full.");
+        const reserved = await reserveRoomPlayer2(code);
+        if(!reserved || !reserved.success){
+            const reason = (reserved && reserved.reason) || "Unknown failure";
+            console.log("[performJoin] reserveRoomPlayer2 failed:", reason);
+            setStatus("❌ " + reason);
             return false;
         }
 
