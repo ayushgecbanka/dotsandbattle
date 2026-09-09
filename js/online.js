@@ -115,10 +115,25 @@ async function createRoomCore(nameOverride){
         .set(game);
 
         console.log("[createRoomCore] set() RESOLVED — write succeeded");
-        renderAuthState();
-        openGame();
 
+        // IMMEDIATE READ: verify the room actually exists in Firebase right after set()
+        try{
+            const readSnap = await db.ref("rooms/" + roomCode).once("value");
+            console.log("[createRoomCore] IMMEDIATE READ — exists:", readSnap.exists());
+            if(readSnap.exists()){
+                console.log("[createRoomCore] IMMEDIATE READ — val:", JSON.stringify(readSnap.val()));
+            }
+            else{
+                console.log("[createRoomCore] IMMEDIATE READ — snapshot is null/empty! Room was NOT written or Rules blocked read.");
+            }
+        }
+        catch(readErr){
+            console.error("[createRoomCore] IMMEDIATE READ FAILED:", readErr && readErr.code, readErr && readErr.message);
+        }
+
+        renderAuthState();
         listenRoom();
+        openGame();
 
         return true;
 
@@ -333,6 +348,7 @@ async function performJoin(code){
     // This helps distinguish "room not found" from "transaction failed".
     try{
         const preSnap = await db.ref("rooms/" + code).once("value");
+        console.log("[performJoin] pre-check read succeeded, exists:", preSnap.exists());
         if(!preSnap.exists()){
             console.log("[performJoin] pre-check: room not found", code);
             setStatus("Room not found. Check the code and try again.");
@@ -359,7 +375,12 @@ async function performJoin(code){
         console.log("[performJoin] pre-check passed", {code: code, p1Uid: p1Uid, myUid: myUid, hasP2: !!preData.players.p2});
     }
     catch(preErr){
-        console.error("[performJoin] pre-check error:", preErr);
+        console.error("[performJoin] pre-check ERROR:", preErr && preErr.code, preErr && preErr.message);
+        // If the read fails due to permission denied, surface the real error
+        if(preErr && preErr.code === "PERMISSION_DENIED"){
+            setStatus("❌ Permission denied reading room. Check Firebase Rules.");
+            return false;
+        }
         // Continue to transaction attempt even if pre-check fails
     }
 
@@ -419,11 +440,10 @@ async function performJoin(code){
     game = data;
 
     renderAuthState();
-    openGame();
+        listenRoom();
+        openGame();
 
-    listenRoom();
-
-    sendSystemMessage(getOnlinePlayerIdentity().name + " joined the room");
+        sendSystemMessage(getOnlinePlayerIdentity().name + " joined the room");
 
     return true;
 

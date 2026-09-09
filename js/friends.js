@@ -496,8 +496,10 @@ function searchPlayers(query){
         return;
     }
 
+    console.log("[searchPlayers] searching for username:", q);
     const exactRef = db.ref("usernames/" + q);
     exactRef.once("value", function(snap){
+        console.log("[searchPlayers] usernames/ read result:", {exists: snap.exists(), val: snap.val()});
         const data = snap.val();
         if(!data){
             results.innerHTML = '<div class="empty-note">No user found with that username.</div>';
@@ -508,7 +510,9 @@ function searchPlayers(query){
             results.innerHTML = '<div class="empty-note">No user found with that username.</div>';
             return;
         }
+        console.log("[searchPlayers] found uid:", uid, "reading publicProfiles/");
         db.ref("publicProfiles/" + uid).once("value", function(snap){
+            console.log("[searchPlayers] publicProfiles/ read result:", {exists: snap.exists(), val: snap.val()});
             const p = snap.val();
             if(!p || p.uid === currentUser.uid){
                 results.innerHTML = '<div class="empty-note">No user found with that username.</div>';
@@ -520,7 +524,13 @@ function searchPlayers(query){
             }).catch(function(error){
                 console.error("searchResultEl error:", error);
             });
+        }, function(err){
+            console.error("[searchPlayers] publicProfiles/ read ERROR:", err && err.code, err && err.message);
+            results.innerHTML = '<div class="empty-note">Error reading profile: ' + (err && err.message || "unknown") + '</div>';
         });
+    }, function(err){
+        console.error("[searchPlayers] usernames/ read ERROR:", err && err.code, err && err.message);
+        results.innerHTML = '<div class="empty-note">Error searching: ' + (err && err.message || "unknown") + '</div>';
     });
 }
 
